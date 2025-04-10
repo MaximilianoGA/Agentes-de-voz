@@ -141,5 +141,5 @@ export interface OrderItem {
 }
 export interface OrderDetailsData {
   items: OrderItem[];
-  totalAmount: number;
+  total: number;
 }

@@ -1,50 +1,77 @@
-import React, { useState, useCallback } from 'react';
-import { Role } from 'ultravox-client';
-import { toggleMute } from '@/lib/callFunctions';
-import { MicIcon, MicOffIcon, Volume2Icon, VolumeOffIcon } from 'lucide-react';
+import React from 'react';
+import { MicIcon, MicOffIcon, VolumeIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 
-interface MicToggleButtonProps {
-  role: Role;
+export interface MicToggleButtonProps {
+  isMuted: boolean;
+  onToggle: () => void;
+  onToggleSpeaker?: () => void;
+  isSpeakerMuted?: boolean;
+  isUser?: boolean;
+  label?: string;
+  className?: string;
 }
 
-const MicToggleButton: React.FC<MicToggleButtonProps> = ({ role }) => {
-  const [isMuted, setIsMuted] = useState(false);
+const MicToggleButton: React.FC<MicToggleButtonProps> = ({
+  isMuted,
+  onToggle,
+  onToggleSpeaker,
+  isSpeakerMuted = false,
+  isUser = true,
+  label,
+  className = "",
+}) => {
+  const getButtonClasses = () => {
+    const baseClasses = "flex items-center justify-center p-3 rounded-full shadow-md transition-all duration-300";
+    const stateClasses = isMuted
+      ? "bg-red-500 hover:bg-red-600 text-white"
+      : "bg-green-500 hover:bg-green-600 text-white";
+    
+    return `${baseClasses} ${stateClasses} ${className}`;
+  };
 
-  const toggleMic = useCallback(async () => {
-    try {
-      toggleMute(role);
-      setIsMuted(!isMuted);
-    } catch (error) {
-      console.error("Error toggling microphone:", error);
+  const getIcon = () => {
+    if (isUser) {
+      return isMuted ? <MicOffIcon size={20} /> : <MicIcon size={20} />;
+    } else {
+      // Para el control del altavoz
+      if (isSpeakerMuted) {
+        return <VolumeXIcon size={20} />;
+      } else {
+        return isMuted ? <VolumeIcon size={20} /> : <Volume2Icon size={20} />;
+      }
     }
-  }, [isMuted]);
+  };
+
+  const getTooltipText = () => {
+    if (isUser) {
+      return isMuted ? "Activar micrófono" : "Silenciar micrófono";
+    } else {
+      return isSpeakerMuted ? "Activar altavoz" : "Silenciar altavoz";
+    }
+  };
+
+  const handleClick = () => {
+    if (isUser || !onToggleSpeaker) {
+      onToggle();
+    } else {
+      onToggleSpeaker();
+    }
+  };
 
   return (
-    <button
-      onClick={toggleMic}
-      className="flex-grow flex items-center justify-center border-2 h-10 hover:bg-gray-700"
-    >
-      {isMuted ? (
-        <>
-          { role === Role.USER ? (
-            <MicOffIcon width={24} className="brightness-0 invert" />
-          ) : (
-            <VolumeOffIcon width={24} className="brightness-0 invert" />
-          )}
-          <span className="ml-2">Unmute</span>
-        </>
-      ) : (
-        <>
-          { role === Role.USER ? (
-            <MicIcon width={24} className="brightness-0 invert" />
-          ) : (
-            <Volume2Icon width={24} className="brightness-0 invert" />
-          )}
-
-          <span className="ml-2">Mute</span>
-        </>
+    <div className="flex flex-col items-center">
+      <button
+        onClick={handleClick}
+        className={getButtonClasses()}
+        aria-label={getTooltipText()}
+        title={getTooltipText()}
+      >
+        {getIcon()}
+      </button>
+      {label && (
+        <span className="text-sm font-medium mt-2 text-amber-900">{label}</span>
       )}
-    </button>
+    </div>
   );
 };
 
