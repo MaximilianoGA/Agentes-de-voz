@@ -14,6 +14,7 @@ import MicToggleButton from '@/app/components/MicToggleButton';
 import OrderDetails from '@/app/components/OrderDetails';
 import MenuTaqueria from '@/app/components/MenuTaqueria';
 import { PhoneOffIcon, MenuIcon, BookUserIcon, MessageSquareTextIcon } from 'lucide-react';
+import OrderAnalytics from './components/order/OrderAnalytics';
 
 type SearchParamsProps = {
   showMuteSpeakerButton: boolean;
@@ -227,7 +228,9 @@ export default function Home() {
       return;
     }
     
-    if (text.includes('extras') || text.includes('complementos') || text.includes('adicionales')) {
+    if (text.includes('extras') || text.includes('complementos') || text.includes('adicionales') || 
+        text.includes('guacamole') || text.includes('quesadilla') || text.includes('queso extra') || 
+        text.includes('cebollitas')) {
       console.log("[page] Mostrando categoría de extras");
       setActiveView('menu');
       setActiveMenuCategory('extras');
@@ -445,7 +448,7 @@ export default function Home() {
             <div className="container mx-auto flex justify-between items-center">
               <div className="flex items-center space-x-3">
                 <BorderedImage 
-                  src="/taco-logo.svg" 
+                  src="/taco-icon.svg" 
                   alt="Taquería Logo" 
                   width={50} 
                   height={50} 
@@ -524,6 +527,9 @@ export default function Home() {
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <OrderDetails />
                 </div>
+                <div className="mt-4">
+                  <OrderAnalytics />
+                </div>
                 
                 <div className="bg-white p-4 rounded-lg shadow-md">
                   <div className="flex flex-col gap-3">
@@ -564,7 +570,7 @@ export default function Home() {
           {/* Footer */}
           <footer className="bg-amber-800 text-amber-200 py-3 text-center text-sm">
             <div className="container mx-auto">
-              <p>Taquería "El Buen Sabor" © 2023 - Asistente de voz con Claude 3.5 Sonnet</p>
+              <p>Taquería "El Buen Sabor" © 2023 - Asistente de voz Cognitive Data Solutions</p>
             </div>
           </footer>
           

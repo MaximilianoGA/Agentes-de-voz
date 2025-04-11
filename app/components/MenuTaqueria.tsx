@@ -1,139 +1,191 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { OrderItem } from '@/lib/types';
-import Image from 'next/image';
+import { OrderItem, MenuItem } from '@/app/lib/types';
+import { Utensils, Coffee, Pizza, ShoppingBag, Search, PlusCircle, MinusCircle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
-// Definición de productos del menú
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: 'tacos' | 'bebidas' | 'extras';
-}
+// Importación dinámica del MenuCard para evitar problemas de hidratación
+const MenuCard = dynamic(() => import('./menu/MenuCard'), { ssr: false });
 
-// Datos de productos para el menú
+// Datos de productos para el menú (se moverán a un servicio o API en producción)
 const menuItems: MenuItem[] = [
   {
     id: 'taco-pastor',
     name: 'Taco al Pastor',
     description: 'Delicioso taco de cerdo marinado con piña',
     price: 15.00,
-    image: '🌮',
-    category: 'tacos'
+    imageUrl: '', // Se usará un emoji en su lugar
+    categoryId: 'tacos',
+    available: true,
+    featured: true,
+    allergens: ['Gluten']
   },
   {
     id: 'taco-suadero',
     name: 'Taco de Suadero',
     description: 'Taco tradicional con carne de res suave',
     price: 17.00,
-    image: '🌮',
-    category: 'tacos'
+    imageUrl: '',
+    categoryId: 'tacos',
+    available: true,
+    allergens: []
   },
   {
     id: 'taco-bistec',
     name: 'Taco de Bistec',
     description: 'Taco con carne de res a la plancha',
     price: 18.00,
-    image: '🌮',
-    category: 'tacos'
+    imageUrl: '',
+    categoryId: 'tacos',
+    available: true,
+    allergens: []
   },
   {
     id: 'taco-campechano',
     name: 'Taco Campechano',
     description: 'Mezcla de bistec y chorizo en taco',
     price: 20.00,
-    image: '🌮',
-    category: 'tacos'
+    imageUrl: '',
+    categoryId: 'tacos',
+    available: true,
+    allergens: []
   },
   {
     id: 'taco-carnitas',
     name: 'Taco de Carnitas',
     description: 'Taco con carne de cerdo cocinado lentamente',
     price: 20.00,
-    image: '🌮',
-    category: 'tacos'
+    imageUrl: '',
+    categoryId: 'tacos',
+    available: true,
+    allergens: []
   },
   {
     id: 'agua-horchata',
     name: 'Agua de Horchata',
     description: 'Bebida refrescante de arroz con canela',
     price: 25.00,
-    image: '🥤',
-    category: 'bebidas'
+    imageUrl: '',
+    categoryId: 'bebidas',
+    available: true,
+    allergens: ['Lácteos'],
+    nutritionalInfo: {
+      calories: 180,
+      protein: 2,
+      carbs: 35,
+      fat: 3
+    }
   },
   {
     id: 'agua-jamaica',
     name: 'Agua de Jamaica',
     description: 'Tradicional agua de flor de jamaica',
     price: 25.00,
-    image: '🧃',
-    category: 'bebidas'
+    imageUrl: '',
+    categoryId: 'bebidas',
+    available: true,
+    allergens: [],
+    nutritionalInfo: {
+      calories: 90,
+      protein: 0,
+      carbs: 22,
+      fat: 0
+    }
   },
   {
     id: 'refresco',
     name: 'Refresco',
     description: 'Bebida gaseosa de varios sabores',
     price: 20.00,
-    image: '🥤',
-    category: 'bebidas'
+    imageUrl: '',
+    categoryId: 'bebidas',
+    available: true,
+    allergens: []
   },
   {
     id: 'guacamole',
     name: 'Guacamole',
     description: 'Dip tradicional de aguacate con totopos',
     price: 35.00,
-    image: '🥑',
-    category: 'extras'
+    imageUrl: '',
+    categoryId: 'extras',
+    available: true,
+    featured: true,
+    allergens: []
   },
   {
     id: 'quesadilla',
     name: 'Quesadilla',
     description: 'Tortilla de maíz con queso derretido',
     price: 30.00,
-    image: '🌯',
-    category: 'extras'
+    imageUrl: '',
+    categoryId: 'extras',
+    available: true,
+    allergens: ['Lácteos', 'Gluten']
   },
   {
     id: 'queso-extra',
     name: 'Queso Extra',
     description: 'Porción extra de queso fresco',
     price: 15.00,
-    image: '🧀',
-    category: 'extras'
+    imageUrl: '',
+    categoryId: 'extras',
+    available: true,
+    allergens: ['Lácteos']
   },
   {
     id: 'cebollitas',
     name: 'Orden de Cebollitas',
     description: 'Cebollitas de cambray asadas con limón',
     price: 25.00,
-    image: '🧅',
-    category: 'extras'
+    imageUrl: '',
+    categoryId: 'extras',
+    available: false,
+    allergens: []
   }
 ];
 
 interface MenuTaqueriaProps {
-  onAddToOrder?: (item: OrderItem) => void;
   activeCategory?: 'tacos' | 'bebidas' | 'extras';
-  onCategoryChange?: (category: 'tacos' | 'bebidas' | 'extras') => void;
+  onCategoryChange: (category: string) => void;
+  onAddToOrder: (item: any) => void;
 }
 
-export function MenuTaqueria({ 
-  onAddToOrder, 
-  activeCategory: externalActiveCategory, 
-  onCategoryChange 
-}: MenuTaqueriaProps) {
+const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange, onAddToOrder }: MenuTaqueriaProps) => {
   const [internalActiveCategory, setInternalActiveCategory] = useState<'tacos' | 'bebidas' | 'extras'>('tacos');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+  const [animatingAddedProductId, setAnimatingAddedProductId] = useState<string | null>(null);
+  const productContainerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
   
   // Usar la categoría externa si se proporciona, o la interna si no
   const activeCategory = externalActiveCategory || internalActiveCategory;
   
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [specialInstructions, setSpecialInstructions] = useState<Record<string, string>>({});
-  const productRefs = useRef<Record<string, HTMLDivElement>>({});
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Efectos de sonido
+  const menuSoundRef = useRef<HTMLAudioElement | null>(null);
+  const addToCartSoundRef = useRef<HTMLAudioElement | null>(null);
+  const highlightSoundRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Lista de categorías disponibles
+  const categories = Array.from(new Set(menuItems.map(item => item.categoryId)));
+
+  // Filtrar items por categoría y búsqueda
+  const filteredItems = menuItems.filter(item => {
+    if (activeCategory && item.categoryId !== activeCategory) return false;
+    if (searchQuery.trim() === '') return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query)
+    );
+  });
   
   // Actualizar la categoría interna cuando la externa cambia
   useEffect(() => {
@@ -142,264 +194,362 @@ export function MenuTaqueria({
     }
   }, [externalActiveCategory]);
   
-  // Efecto para escuchar eventos de resaltado de productos
+  // Verificar la capacidad de desplazamiento
   useEffect(() => {
-    const handleProductHighlight = (event: CustomEvent) => {
-      const productId = event.detail.productId;
-      const productElement = productRefs.current[productId];
-      
-      if (productElement) {
-        // Clear any existing timeout
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
+    const checkScrollability = () => {
+      if (productContainerRef.current) {
+        const container = productContainerRef.current.querySelector('.overflow-x-auto');
+        if (container) {
+          setCanScrollLeft(container.scrollLeft > 0);
+          setCanScrollRight(
+            container.scrollLeft < container.scrollWidth - container.clientWidth - 5
+          );
         }
-        
-        // Remove highlight from all products
-        Object.values(productRefs.current).forEach(ref => {
-          ref.classList.remove('highlight-product');
-        });
-        
-        // Add highlight to the selected product and scroll it into view
-        productElement.classList.add('highlight-product');
-        productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Find the category of the highlighted product
-        const product = menuItems.find(item => item.id === productId);
-        if (product) {
-          setInternalActiveCategory(product.category);
-        }
-        
-        // Set a timeout to remove the highlight after a few seconds
-        timeoutRef.current = setTimeout(() => {
-          productElement.classList.remove('highlight-product');
-        }, 2500);
       }
     };
-    
-    // Agregar el listener de eventos
-    window.addEventListener('highlightProduct', handleProductHighlight as EventListener);
-    console.log('MenuTaqueria: Listener de resaltado registrado');
-    
-    // Limpieza al desmontar
-    return () => {
-      window.removeEventListener('highlightProduct', handleProductHighlight as EventListener);
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      console.log('MenuTaqueria: Listener de resaltado y timeouts eliminados');
-    };
-  }, []);
-  
-  // Función para cambiar entre categorías
-  const handleCategoryChange = (category: 'tacos' | 'bebidas' | 'extras') => {
-    setInternalActiveCategory(category);
-    if (onCategoryChange) {
-      onCategoryChange(category);
+
+    const container = productContainerRef.current?.querySelector('.overflow-x-auto');
+    if (container) {
+      container.addEventListener('scroll', checkScrollability);
+      // Verificación inicial
+      checkScrollability();
     }
-    // Smooth scroll to the top of the products section
-    document.getElementById('menu-products')?.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-  
-  // Filtrar artículos por categoría activa
-  const filteredItems = menuItems.filter(item => item.category === activeCategory);
-  
-  // Manejar cambio de cantidad
-  const handleQuantityChange = (id: string, value: number) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: Math.max(0, value)
-    }));
-  };
-  
-  // Manejar cambio en instrucciones especiales
-  const handleInstructionsChange = (id: string, value: string) => {
-    setSpecialInstructions(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
-  
-  // Agregar producto al pedido
-  const handleAddToOrder = (item: MenuItem) => {
-    const quantity = quantities[item.id] || 1;
-    if (quantity <= 0) return;
-    
-    const orderItem: OrderItem = {
-      name: item.name,
-      price: item.price,
-      quantity: quantity,
-      specialInstructions: specialInstructions[item.id] || ''
+
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', checkScrollability);
+      }
     };
-    
-    if (onAddToOrder) {
-      onAddToOrder(orderItem);
-      
-      // Resetear después de agregar
-      setQuantities(prev => ({
-        ...prev,
-        [item.id]: 0
-      }));
-      setSpecialInstructions(prev => ({
-        ...prev,
-        [item.id]: ''
-      }));
+  }, [filteredItems, activeCategory]);
+
+  // Función para desplazar a la izquierda
+  const scrollLeft = () => {
+    const container = productContainerRef.current?.querySelector('.overflow-x-auto');
+    if (container) {
+      container.scrollBy({ left: -300, behavior: 'smooth' });
+      playNavigationSound();
     }
   };
 
-  return (
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-amber-50 to-white">
-      {/* Encabezado */}
-      <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-white p-5 sticky top-0 shadow-lg z-10 rounded-b-lg">
-        <h2 className="text-3xl font-bold mb-2 flex items-center">
-          <span className="mr-2">🌮</span>Nuestro Menú
-        </h2>
-        
-        {/* Botones de categorías */}
-        <div className="flex space-x-3 mt-4 overflow-x-auto pb-1">
-          <button
-            onClick={() => handleCategoryChange('tacos')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'tacos' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🌮</span> Tacos
-          </button>
-          <button
-            onClick={() => handleCategoryChange('bebidas')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'bebidas' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🥤</span> Bebidas
-          </button>
-          <button
-            onClick={() => handleCategoryChange('extras')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'extras' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🍽️</span> Extras
-          </button>
-        </div>
-      </div>
+  // Función para desplazar a la derecha
+  const scrollRight = () => {
+    const container = productContainerRef.current?.querySelector('.overflow-x-auto');
+    if (container) {
+      container.scrollBy({ left: 300, behavior: 'smooth' });
+      playNavigationSound();
+    }
+  };
+  
+  // Función para reproducir sonido de menú de forma segura
+  const playMenuSound = (category: string) => {
+    if (menuSoundRef.current) {
+      menuSoundRef.current.pause();
+      menuSoundRef.current.currentTime = 0;
       
-      {/* Lista de productos */}
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {menuItems
-            .filter(item => item.category === activeCategory)
-            .map((item, index) => (
-              <div 
-                key={item.id} 
-                id={`product-${item.id}`} 
-                className="product-card border border-amber-100 rounded-xl overflow-hidden shadow-sm bg-white hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-                style={{
-                  animationDelay: `${index * 0.08}s`,
-                  opacity: 0,
-                  animation: 'fadeIn 0.5s ease forwards'
-                }}
-                ref={el => {
-                  if (el) productRefs.current[item.id] = el;
-                }}
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center">
-                        <span className="text-3xl mr-3 transition-transform duration-300 hover:scale-110 hover:rotate-6">{item.image}</span>
-                        <h3 className="text-lg font-bold text-amber-900">{item.name}</h3>
-                      </div>
-                      <p className="text-amber-700 text-sm mt-1">{item.description}</p>
-                    </div>
-                    <div className="text-xl font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                      ${item.price.toFixed(2)}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="flex items-center mb-3">
-                      <label className="block text-amber-800 text-sm mr-2 font-medium">Cantidad:</label>
-                      <div className="flex items-center shadow-sm rounded-lg overflow-hidden">
-                        <button 
-                          onClick={() => handleQuantityChange(item.id, Math.max(1, (quantities[item.id] || 1) - 1))}
-                          className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium w-10 h-10 rounded-l flex items-center justify-center transition-colors duration-200"
-                        >
-                          -
-                        </button>
-                        <input 
-                          type="number" 
-                          min="1" 
-                          max="10" 
-                          value={quantities[item.id] || 1} 
-                          readOnly
-                          className="w-12 h-10 text-center border-t border-b border-amber-100 bg-white text-amber-900 font-medium"
-                        />
-                        <button 
-                          onClick={() => handleQuantityChange(item.id, Math.min(10, (quantities[item.id] || 1) + 1))}
-                          className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium w-10 h-10 rounded-r flex items-center justify-center transition-colors duration-200"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-amber-800 text-sm mb-1 font-medium">Instrucciones especiales:</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Sin cebolla, extra salsa..." 
-                        value={specialInstructions[item.id] || ''} 
-                        onChange={(e) => handleInstructionsChange(item.id, e.target.value)}
-                        className="w-full p-3 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all bg-amber-50/50 placeholder-amber-300"
-                      />
-                    </div>
-                    
-                    <button 
-                      onClick={() => handleAddToOrder(item)}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white py-3 px-4 rounded-lg shadow transition-all duration-300 transform hover:shadow-md hover:scale-[1.02] font-medium flex items-center justify-center"
-                    >
-                      <span className="mr-2">🛒</span>
-                      Agregar al Pedido
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
+      // Usar promesa con manejo de errores para evitar bloqueos
+      const playPromise = menuSoundRef.current.play();
       
-      {/* Estilos para animación de resaltado y otras animaciones */}
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes highlightAnimation {
-          0% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0); transform: scale(1); }
-          25% { box-shadow: 0 0 15px 6px rgba(245, 158, 11, 0.4); transform: scale(1.03); background-color: rgba(254, 243, 199, 0.8); }
-          50% { box-shadow: 0 0 10px 4px rgba(245, 158, 11, 0.3); transform: scale(1.02); background-color: rgba(254, 243, 199, 0.5); }
-          75% { box-shadow: 0 0 15px 6px rgba(245, 158, 11, 0.4); transform: scale(1.03); background-color: rgba(254, 243, 199, 0.8); }
-          100% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0); transform: scale(1); }
-        }
-        
-        .highlight-product {
-          animation: highlightAnimation 2.5s ease;
-          border-color: #f59e0b;
-          border-width: 2px;
-          z-index: 1;
-        }
-      `}</style>
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log('Error al reproducir sonido de menú:', err);
+          // El navegador no permite reproducir audio sin interacción del usuario
+        });
+      }
+    }
+  };
+  
+  // Función para reproducir sonido al añadir al carrito de forma segura
+  const playAddToCartSound = () => {
+    if (addToCartSoundRef.current) {
+      addToCartSoundRef.current.pause();
+      addToCartSoundRef.current.currentTime = 0;
+      
+      // Usar promesa con manejo de errores para evitar bloqueos
+      const playPromise = addToCartSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log('Error al reproducir sonido de carrito:', err);
+          // El navegador no permite reproducir audio sin interacción del usuario
+        });
+      }
+    }
+  };
+  
+  // Función para reproducir sonido de destacado de forma segura
+  const playHighlightSound = () => {
+    if (highlightSoundRef.current) {
+      highlightSoundRef.current.pause();
+      highlightSoundRef.current.currentTime = 0;
+      
+      // Usar promesa con manejo de errores para evitar bloqueos
+      const playPromise = highlightSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log('Error al reproducir sonido de destacado:', err);
+          // El navegador no permite reproducir audio sin interacción del usuario
+        });
+      }
+    }
+  };
+  
+  // Función para reproducir sonido de navegación de forma segura
+  const playNavigationSound = () => {
+    if (menuSoundRef.current) {
+      menuSoundRef.current.volume = 0.3; // Volumen más bajo para navegación
+      menuSoundRef.current.pause();
+      menuSoundRef.current.currentTime = 0;
+      
+      // Usar promesa con manejo de errores para evitar bloqueos
+      const playPromise = menuSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.log('Error al reproducir sonido de navegación:', err);
+          // El navegador no permite reproducir audio sin interacción del usuario
+        });
+      }
+      
+      menuSoundRef.current.volume = 1.0; // Restaurar volumen
+    }
+  };
+  
+  // Mostrar un mensaje cuando no hay elementos para mostrar
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-64 text-center p-6 bg-amber-50 rounded-lg">
+      <img src="/taco-sad.svg" alt="No resultados" className="w-16 h-16 opacity-40 mb-3" />
+      <h3 className="text-lg font-semibold text-amber-800">No se encontraron resultados</h3>
+      <p className="text-amber-600 mt-2">Intenta con otra búsqueda o categoría</p>
     </div>
   );
-}
+  
+  // Animación al añadir un producto al carrito
+  const handleItemAddToOrder = (item: any) => {
+    // Animar el producto
+    setAnimatingAddedProductId(item.id);
+    setTimeout(() => {
+      setAnimatingAddedProductId(null);
+    }, 1000);
+    
+    // Reproducir sonido
+    playAddToCartSound();
+    
+    // Usar la función onAddToOrder proporcionada por props
+    onAddToOrder(item);
+  };
+  
+  // Función para establecer la referencia del elemento
+  const setItemRef = (id: string, element: HTMLDivElement | null) => {
+    itemRefs.current[id] = element;
+  };
+  
+  // Escuchar eventos de highlightProduct modificado para reproducir sonido
+  useEffect(() => {
+    // Escuchar el evento 'highlightProduct'
+    const handleHighlightProduct = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { productId } = customEvent.detail;
+      
+      console.log(`[MenuTaqueria] Destacando producto: ${productId}`);
+      
+      if (productId) {
+        // Encontrar el producto para determinar su categoría
+        const product = menuItems.find(item => item.id === productId);
+        if (product && product.categoryId) {
+          // Cambiar a la categoría del producto
+          onCategoryChange(product.categoryId);
+        }
+        
+        // Destacar el producto
+        setHighlightedProductId(productId);
+        
+        // Reproducir sonido de destacado
+        playHighlightSound();
+        
+        // Hacer scroll al producto después de un pequeño retraso
+        setTimeout(() => {
+          const itemRef = itemRefs.current[productId];
+          if (itemRef) {
+            itemRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          // Mantener el destacado durante 3 segundos y luego quitarlo
+          setTimeout(() => {
+            setHighlightedProductId(null);
+          }, 3000);
+        }, 300);
+      }
+    };
+
+    window.addEventListener('highlightProduct', handleHighlightProduct);
+    
+    return () => {
+      window.removeEventListener('highlightProduct', handleHighlightProduct);
+    };
+  }, [onCategoryChange]);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header del menú */}
+      <div className="bg-gradient-to-r from-amber-600 to-amber-500 p-4 rounded-t-lg shadow-md">
+        <div className="flex items-center text-white mb-4">
+          <Utensils className="mr-2" size={20} />
+          <h2 className="text-xl font-bold">Menú La Taquería</h2>
+        </div>
+        
+        {/* Buscador */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Buscar platillos..."
+            className="w-full p-2 pl-10 rounded-lg border-2 border-amber-300 focus:border-amber-400 focus:outline-none"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Search className="absolute left-3 top-2.5 text-amber-500" size={20} />
+          {searchQuery && (
+            <button 
+              className="absolute right-3 top-2.5 text-amber-500 hover:text-amber-700"
+              onClick={() => setSearchQuery('')}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Categorías */}
+      <div className="bg-amber-100 p-2 flex space-x-2 overflow-x-auto shadow-inner">
+        <button
+          onClick={() => {
+            setInternalActiveCategory('tacos');
+            onCategoryChange('tacos');
+            playMenuSound('tacos');
+          }}
+          className={`px-4 py-2 rounded-full transition-colors flex items-center shadow-sm ${
+            activeCategory === 'tacos' 
+              ? 'bg-amber-600 text-white' 
+              : 'bg-white text-amber-800 hover:bg-amber-200'
+          }`}
+        >
+          <Utensils className="mr-2" size={16} />
+          Tacos
+        </button>
+        <button
+          onClick={() => {
+            setInternalActiveCategory('bebidas');
+            onCategoryChange('bebidas');
+            playMenuSound('bebidas');
+          }}
+          className={`px-4 py-2 rounded-full transition-colors flex items-center shadow-sm ${
+            activeCategory === 'bebidas' 
+              ? 'bg-amber-600 text-white' 
+              : 'bg-white text-amber-800 hover:bg-amber-200'
+          }`}
+        >
+          <Coffee className="mr-2" size={16} />
+          Bebidas
+        </button>
+        <button
+          onClick={() => {
+            setInternalActiveCategory('extras');
+            onCategoryChange('extras');
+            playMenuSound('extras');
+          }}
+          className={`px-4 py-2 rounded-full transition-colors flex items-center shadow-sm ${
+            activeCategory === 'extras' 
+              ? 'bg-amber-600 text-white' 
+              : 'bg-white text-amber-800 hover:bg-amber-200'
+          }`}
+        >
+          <Pizza className="mr-2" size={16} />
+          Extras
+        </button>
+      </div>
+      
+      {/* Contenedor principal con scroll horizontal mejorado */}
+      <div className="flex-grow bg-amber-50 p-4 overflow-hidden relative" ref={productContainerRef}>
+        {filteredItems.length > 0 ? (
+          <>
+            {/* Controles de navegación */}
+            {canScrollLeft && (
+              <button 
+                onClick={scrollLeft}
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-amber-500 text-white rounded-r-full p-2 shadow-md opacity-80 hover:opacity-100 transition-opacity"
+                aria-label="Desplazar a la izquierda"
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
+            
+            {canScrollRight && (
+              <button 
+                onClick={scrollRight}
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-amber-500 text-white rounded-l-full p-2 shadow-md opacity-80 hover:opacity-100 transition-opacity"
+                aria-label="Desplazar a la derecha"
+              >
+                <ChevronRight size={24} />
+              </button>
+            )}
+            
+            <div className="h-full overflow-x-auto scroll-smooth">
+              <div className="flex flex-nowrap space-x-4 py-2 min-w-max">
+                {filteredItems.map((item, index) => (
+                  <div 
+                    key={item.id}
+                    ref={(el) => setItemRef(item.id, el)}
+                    className={`flex-shrink-0 w-64 bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 ${
+                      highlightedProductId === item.id 
+                        ? 'ring-4 ring-amber-400 scale-105 shadow-lg' 
+                        : 'hover:shadow-md hover:translate-y-[-2px]'
+                    } ${
+                      animatingAddedProductId === item.id 
+                        ? 'animate-pulse bg-green-50'
+                        : ''
+                    }`}
+                    style={{ height: 'calc(100% - 20px)' }}
+                  >
+                    <div className="relative p-4 flex flex-col h-full">
+                      {highlightedProductId === item.id && (
+                        <div className="absolute top-2 right-2">
+                          <Sparkles className="text-amber-500 animate-pulse" size={24} />
+                        </div>
+                      )}
+                      
+                      <MenuCard
+                        item={item}
+                        index={index}
+                        onAddToCart={handleItemAddToOrder}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          renderEmptyState()
+        )}
+      </div>
+
+      {/* Efectos de sonido */}
+      <audio ref={menuSoundRef} className="hidden">
+        <source src="/sounds/menu-change.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+      
+      <audio ref={addToCartSoundRef} className="hidden">
+        <source src="/sounds/add-to-cart.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+      
+      <audio ref={highlightSoundRef} className="hidden">
+        <source src="/sounds/highlight.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  );
+};
 
 export default MenuTaqueria; 

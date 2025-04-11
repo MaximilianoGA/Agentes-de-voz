@@ -1,16 +1,30 @@
-import { ClientToolImplementation } from 'ultravox-client';
+// Eliminamos las importaciones problemáticas y definimos los tipos localmente
+// import { ClientToolImplementation, ToolParams } from 'ultravox-client';
+// import { ToolDefinition } from "ultravox";
+
+// Definición local de tipos para reemplazar las importaciones
+type ToolParams = any;
+type ClientToolImplementation = (params: ToolParams) => Promise<string>;
 
 /**
  * Herramienta para actualizar los detalles del pedido.
  * Valida y procesa los datos del pedido antes de enviar el evento.
  */
-export const updateOrderTool: ClientToolImplementation = (params) => {
-  console.log("[updateOrderTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
-  
-  if (typeof window === "undefined") {
-    console.warn("[updateOrderTool] No estamos en un entorno de navegador, no se puede actualizar el pedido");
-    return "Detalles del pedido procesados, pero no se pueden mostrar en este entorno.";
-  }
+export interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+  id?: string;
+  categoryId?: string;
+  specialInstructions?: string;
+}
+
+export interface OrderParameters {
+  orderData: any;
+}
+
+export const updateOrderTool: ClientToolImplementation = (params: ToolParams) => {
+  console.log("[updateOrderTool] Invocado con parámetros:", params);
   
   // Implementar un timeout para la operación completa
   const timeoutPromise = new Promise<string>((resolve) => {
@@ -21,195 +35,199 @@ export const updateOrderTool: ClientToolImplementation = (params) => {
   
   const operationPromise = new Promise<string>((resolve) => {
     try {
-      console.log("[updateOrderTool] Iniciando procesamiento de la orden");
-      
+      // Verificar que se proporcionó orderData
       if (!params || typeof params !== 'object') {
-        console.error("[updateOrderTool] Error: Parámetros inválidos:", params);
-        resolve("Error: Parámetros de pedido inválidos");
+        console.error("[updateOrderTool] Error: Parámetros inválidos");
+        resolve("Error: No se proporcionó información de la orden");
         return;
       }
-      
-      console.log("[updateOrderTool] Extrayendo datos de la orden");
-      
+
       // Extraer datos del pedido
       const { orderData, orderDetailsData, ...rest } = params as any;
       
-      console.log("[updateOrderTool] Datos extraídos:", {
-        orderData: orderData,
-        orderDetailsData: orderDetailsData,
-        restParams: rest
-      });
-      
-      // Validar estructura de datos de pedido
       let orderItems: any[] = [];
-      
-      // Manejar diferentes formatos para orderDetailsData
+
+      // Determinar el formato de los datos y procesarlos adecuadamente
       if (orderDetailsData) {
         console.log("[updateOrderTool] Usando orderDetailsData explícito");
-        
         if (typeof orderDetailsData === 'string') {
           try {
-            // Intentar parsear si es un string JSON
-            console.log("[updateOrderTool] Parseando orderDetailsData de string JSON");
             orderItems = JSON.parse(orderDetailsData);
-          } catch (parseError) {
-            console.error("[updateOrderTool] Error al parsear orderDetailsData como JSON:", parseError);
-            orderItems = []; // Reset en caso de error
+          } catch (e) {
+            console.error("[updateOrderTool] Error al parsear JSON:", e);
+            resolve("Error: Formato de datos inválido");
+            return;
           }
         } else if (Array.isArray(orderDetailsData)) {
-          console.log("[updateOrderTool] orderDetailsData es un array");
           orderItems = orderDetailsData;
         } else {
-          console.warn("[updateOrderTool] orderDetailsData en formato inesperado:", typeof orderDetailsData);
-          orderItems = [];
+          orderItems = [orderDetailsData];
         }
       } else if (orderData) {
         console.log("[updateOrderTool] Usando orderData");
-        
-        // Extraer items del orderData
         if (Array.isArray(orderData)) {
-          console.log("[updateOrderTool] orderData es un array");
           orderItems = orderData;
-        } else if (orderData.items && Array.isArray(orderData.items)) {
-          console.log("[updateOrderTool] Extrayendo items de orderData.items");
-          orderItems = orderData.items;
         } else if (typeof orderData === 'object') {
-          console.log("[updateOrderTool] orderData es un objeto, convirtiéndolo a array de un elemento");
-          orderItems = [orderData];
+          // Comprobar si es un objeto con propiedad 'items'
+          if (orderData.items && Array.isArray(orderData.items)) {
+            orderItems = orderData.items;
+          } else {
+            // Intentar convertir el objeto en un array de items
+            const items = [];
+            for (const key in orderData) {
+              if (typeof orderData[key] === 'object') {
+                // Conservar el ID original como propiedad id
+                const item = { 
+                  ...orderData[key],
+                  id: key, // Guardar el ID original
+                };
+                items.push(item);
+              }
+            }
+            
+            if (items.length > 0) {
+              orderItems = items;
+            } else {
+              // Última alternativa - tratar todo el objeto como un solo item
+              orderItems = [orderData];
+            }
+          }
         } else if (typeof orderData === 'string') {
           try {
-            // Intentar parsear si es un string JSON
-            console.log("[updateOrderTool] Parseando orderData de string JSON");
-            const parsedData = JSON.parse(orderData);
-            
-            if (Array.isArray(parsedData)) {
-              orderItems = parsedData;
-            } else if (parsedData.items && Array.isArray(parsedData.items)) {
-              orderItems = parsedData.items;
-            } else {
-              orderItems = [parsedData];
+            const parsed = JSON.parse(orderData);
+            if (Array.isArray(parsed)) {
+              orderItems = parsed;
+            } else if (typeof parsed === 'object') {
+              // Si es un objeto, aplicar la misma lógica que arriba
+              if (parsed.items && Array.isArray(parsed.items)) {
+                orderItems = parsed.items;
+              } else {
+                const items = [];
+                for (const key in parsed) {
+                  if (typeof parsed[key] === 'object') {
+                    const item = { 
+                      ...parsed[key],
+                      id: key,
+                    };
+                    items.push(item);
+                  }
+                }
+                
+                if (items.length > 0) {
+                  orderItems = items;
+                } else {
+                  orderItems = [parsed];
+                }
+              }
             }
-          } catch (parseError) {
-            console.error("[updateOrderTool] Error al parsear orderData como JSON:", parseError);
-            orderItems = []; // Reset en caso de error
+          } catch (e) {
+            console.error("[updateOrderTool] Error al parsear JSON:", e);
+            resolve("Error: Formato de datos inválido");
+            return;
           }
-        } else {
-          console.warn("[updateOrderTool] orderData en formato inesperado:", typeof orderData);
-          orderItems = [];
         }
       } else {
-        // Buscar ítems en cualquier parámetro que pueda contenerlos
+        // Intentar buscar datos relevantes en otros campos
         console.log("[updateOrderTool] Buscando datos de orden en cualquier parámetro");
-        
         for (const key in rest) {
           const value = rest[key];
-          
           if (Array.isArray(value)) {
-            console.log(`[updateOrderTool] Encontrado array en params.${key}`);
             orderItems = value;
             break;
-          } else if (value && typeof value === 'object' && value.items && Array.isArray(value.items)) {
-            console.log(`[updateOrderTool] Encontrado objeto con items en params.${key}`);
-            orderItems = value.items;
-            break;
+          } else if (value && typeof value === 'object') {
+            if (value.items && Array.isArray(value.items)) {
+              orderItems = value.items;
+              break;
+            } else {
+              orderItems = [value];
+              break;
+            }
           }
         }
       }
-      
-      // Validar y limpiar cada ítem del pedido
-      const validatedItems = orderItems.map((item, index) => {
-        console.log(`[updateOrderTool] Procesando ítem ${index}:`, item);
-        
-        // Validar y limitar la cantidad
-        let quantity = 1; // Valor predeterminado
-        
-        if (typeof item.quantity === 'number' && !isNaN(item.quantity)) {
-          // Limitar a un máximo de 10 por ítem para prevenir errores
-          if (item.quantity > 10) {
-            console.warn(`[updateOrderTool] Cantidad excesiva detectada (${item.quantity}), limitando a 10.`);
-            quantity = 10;
-          } else if (item.quantity < 1) {
-            console.warn(`[updateOrderTool] Cantidad inválida (${item.quantity}), estableciendo a 1.`);
-            quantity = 1;
-          } else {
-            quantity = Math.round(item.quantity); // Asegurar que sea un entero
-          }
-        } else {
-          console.warn(`[updateOrderTool] Cantidad no numérica (${item.quantity}), estableciendo a 1.`);
-        }
-        
-        // Validar el nombre del producto
-        const name = item.name ? String(item.name).trim() : "Producto sin nombre";
-        if (!name || name === "Producto sin nombre") {
-          console.warn("[updateOrderTool] Producto sin nombre definido:", item);
-        }
-        
-        // Validar el precio
-        let price = 0;
-        if (typeof item.price === 'number' && !isNaN(item.price)) {
-          price = item.price;
-        } else {
-          console.warn(`[updateOrderTool] Precio no válido (${item.price}), usando 0:`, item);
-        }
-        
-        const validatedItem = {
-          name: name,
-          quantity: quantity,
-          price: price,
-          specialInstructions: typeof item.specialInstructions === 'string' ? item.specialInstructions : ""
-        };
-        
-        console.log(`[updateOrderTool] Ítem ${index} validado:`, validatedItem);
-        return validatedItem;
-      });
 
-      // IMPORTANTE: Convertir a string JSON antes de enviar el evento
-      // El componente OrderDetails.tsx espera recibir un string JSON
-      const validatedItemsJson = JSON.stringify(validatedItems);
+      // Validar cada item de la orden
+      const validatedItems = orderItems
+        .filter(item => {
+          // Verificar si el item tiene las propiedades requeridas
+          if (!item || typeof item !== 'object') {
+            console.warn("[updateOrderTool] Item inválido:", item);
+            return false;
+          }
+          
+          if (!item.name || item.name.trim() === '') {
+            console.warn("[updateOrderTool] Item sin nombre:", item);
+            return false;
+          }
+          
+          if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+            console.warn("[updateOrderTool] Item con cantidad inválida:", item);
+            // Intentar corregir si es posible
+            if (typeof item.quantity === 'string') {
+              try {
+                item.quantity = parseInt(item.quantity, 10);
+                if (isNaN(item.quantity) || item.quantity <= 0) {
+                  item.quantity = 1; // Valor por defecto
+                }
+              } catch (e) {
+                item.quantity = 1; // Valor por defecto
+              }
+            } else {
+              item.quantity = 1; // Valor por defecto
+            }
+          }
+          
+          if (typeof item.price !== 'number' || item.price < 0) {
+            console.warn("[updateOrderTool] Item con precio inválido:", item);
+            // No intentamos corregir el precio, ya que es un valor crítico
+            return false;
+          }
+          
+          // Asegurarse de que id y categoryId están presentes si existen
+          // No los filtramos si faltan, simplemente los conservamos si están
+          
+          return true;
+        })
+        .map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          id: item.id || undefined,
+          categoryId: item.categoryId || undefined,
+          specialInstructions: item.specialInstructions || undefined
+        }));
+
+      if (validatedItems.length === 0) {
+        console.warn("[updateOrderTool] No hay items válidos en la orden");
+        resolve("Error: No hay productos válidos en la orden");
+        return;
+      }
+
+      console.log("[updateOrderTool] Items validados:", validatedItems);
+
+      // Convertir a JSON para el evento
+      const orderJson = JSON.stringify(validatedItems);
       
-      // Imprimir el JSON final para depuración
-      console.log("[updateOrderTool] JSON final a enviar:", validatedItemsJson);
-      
-      try {
-        // Guardar en localStorage para persistencia - redundancia para mayor seguridad
-        localStorage.setItem('currentOrder', validatedItemsJson);
-        console.log("[updateOrderTool] Orden guardada en localStorage");
-      } catch (storageError) {
-        console.error("[updateOrderTool] Error al guardar en localStorage:", storageError);
-        // Continuar a pesar del error
+      // Guardar en localStorage para persistencia
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('orderDetails', orderJson);
       }
       
-      try {
-        // Despachar el evento con los datos validados como STRING
-        const eventToDispatch = new CustomEvent("orderDetailsUpdated", {
-          detail: validatedItemsJson
+      // Disparar evento para actualizar la UI
+      console.log("[updateOrderTool] Disparando evento con orden:", orderJson);
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('orderDetailsUpdated', {
+          detail: orderJson
         });
-        
-        window.dispatchEvent(eventToDispatch);
-        console.log("[updateOrderTool] Evento orderDetailsUpdated despachado correctamente");
-      } catch (eventError) {
-        console.error("[updateOrderTool] Error al despachar evento:", eventError);
-        // Continuar a pesar del error
+        window.dispatchEvent(event);
       }
       
       // Calcular el total del pedido para informar
       const total = validatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       resolve(`Detalles del pedido actualizados correctamente. Total: $${total.toFixed(2)}`);
     } catch (error) {
-      console.error("[updateOrderTool] Error crítico durante el procesamiento:", error);
-      
-      // Intentar guardar información de error para diagnóstico
-      try {
-        localStorage.setItem('orderToolError', JSON.stringify({
-          timestamp: new Date().toISOString(),
-          error: String(error),
-          params: JSON.stringify(params)
-        }));
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      resolve("Error al procesar los detalles del pedido. Por favor intente nuevamente.");
+      console.error("[updateOrderTool] Error al procesar la orden:", error);
+      resolve("Error interno al procesar la orden");
     }
   });
   
@@ -226,7 +244,7 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
   
   if (typeof window === "undefined") {
     console.warn("[highlightProductTool] No estamos en un entorno de navegador");
-    return "No se puede resaltar el producto en este entorno.";
+    return Promise.resolve("No se puede resaltar el producto en este entorno.");
   }
   
   try {
@@ -235,7 +253,7 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
     
     if (!productId) {
       console.error("[highlightProductTool] Error: ID de producto no proporcionado");
-      return "Error: ID de producto no proporcionado";
+      return Promise.resolve("Error: ID de producto no proporcionado");
     }
     
     console.log(`[highlightProductTool] Resaltando producto: ${productId}`);
@@ -248,9 +266,12 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
     window.dispatchEvent(event);
     console.log("[highlightProductTool] Evento highlightProduct despachado correctamente");
     
-    return `Producto ${productId} resaltado correctamente.`;
+    return Promise.resolve(`Producto ${productId} resaltado correctamente.`);
   } catch (error) {
     console.error("[highlightProductTool] Error al resaltar producto:", error);
-    return "Error al resaltar el producto.";
+    return Promise.resolve("Error al resaltar el producto.");
   }
-}; 
+};
+
+// Exportamos todas las herramientas disponibles
+export const clientTools = [updateOrderTool]; 

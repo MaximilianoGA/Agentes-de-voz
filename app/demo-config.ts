@@ -41,14 +41,20 @@ function getSystemPrompt() {
     * El usuario pide eliminar algún producto
     * El usuario cambia la cantidad de un producto
     
-  - NO RESPONDER AL USUARIO sin antes haber llamado a "updateOrder" cuando sea necesario
-  - Asegúrate de que el primer paso tras recibir un pedido o cambio sea SIEMPRE llamar a updateOrder
-  - No intentes procesar múltiples acciones en una sola llamada - cada cambio debe generar una llamada a updateOrder
+  - UTILIZA "highlightProduct" cuando:
+    * El usuario pide recomendaciones o más información sobre un producto específico
+    * El usuario pregunta sobre algún producto pero no lo confirma para agregar
+    * Quieras llamar la atención del usuario sobre un producto específico como parte de una sugerencia
+    * Necesites mostrar visualmente un producto mientras hablas de él
+    
+  - El orden correcto de uso es: primero "highlightProduct" para resaltar al mencionar/recomendar, luego "updateOrder" si el usuario confirma el pedido
+  - No intentes procesar múltiples acciones en una sola llamada - cada cambio debe generar una llamada a la herramienta correspondiente
   - Es URGENTE que llames a updateOrder con cada cambio para mantener la interfaz actualizada
-  - NUNCA omitas la llamada a updateOrder cuando se mencionen productos
-  - NO emitas texto mientras llamas a updateOrder
+  - NUNCA omitas la llamada a updateOrder cuando se confirme un pedido
+  - NO emitas texto mientras llamas a las herramientas
 
-  ## Formato CORRECTO para llamar a updateOrder (EJEMPLOS CONCRETOS)
+  ## Formato CORRECTO para llamar a las herramientas (EJEMPLOS CONCRETOS)
+  ### Ejemplo para updateOrder:
   Cuando un cliente pide "quiero dos tacos al pastor", INMEDIATAMENTE debes hacer esto:
   \`\`\`
   Función: updateOrder
@@ -85,7 +91,18 @@ function getSystemPrompt() {
   }
   \`\`\`
 
-  IMPORTANTE: SIEMPRE incluye TODOS los ítems anteriores cuando hagas una actualización, no solo el nuevo ítem.
+  ### Ejemplo para highlightProduct:
+  Cuando un cliente pregunta "¿qué tacos tienen?", puedes resaltar un producto recomendado:
+  \`\`\`
+  Función: highlightProduct
+  Parámetros: {
+    "productId": "taco-pastor"
+  }
+  \`\`\`
+
+  Luego puedes decir: "Tenemos varios tipos de tacos. Uno de nuestros más populares es el taco al pastor, que está hecho con carne marinada y piña. También tenemos suadero, bistec, campechano y carnitas."
+
+  IMPORTANTE: SIEMPRE incluye TODOS los ítems anteriores cuando hagas una actualización con updateOrder, no solo el nuevo ítem.
   MUY IMPORTANTE: Asegúrate de usar exactamente este formato, envía el array de ítems directamente bajo la propiedad "orderDetailsData".
 
   ## Pautas de Respuesta

@@ -198,20 +198,75 @@
   }
   50% {
     transform: scale(1.05);
-    background-color: rgba(101, 163, 13, 0.2);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   }
   100% {
     transform: scale(1);
   }
 }
 
-/* Clase para productos resaltados */
-.highlight-product {
-  animation: pulse-highlight 1.5s infinite;
-  background-color: rgba(251, 191, 36, 0.3) !important;
-  border-color: var(--taco-highlight) !important;
-  position: relative;
-  z-index: 10;
+/* Animación de resaltado para producto resaltado por el agente */
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 10px 5px rgba(251, 191, 36, 0.5);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    transform: scale(1);
+  }
+}
+
+/* Clase para activar la animación de destacado */
+.highlight-pulse {
+  animation: highlightPulse 1.5s ease-in-out infinite;
+  border-color: #fbbf24 !important;
+}
+
+/* Animación de añadido al carrito */
+@keyframes addedToCart {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(22, 163, 74, 0.3);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  75% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Clase para activar animación de añadido al carrito */
+.added-to-cart {
+  animation: addedToCart 0.8s ease-in-out forwards;
+  border-color: #16a34a !important;
+  box-shadow: 0 0 15px rgba(22, 163, 74, 0.2);
+}
+
+/* Animación para rebote lento */
+@keyframes slowBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Clase para rebote lento */
+.animate-bounce-slow {
+  animation: slowBounce 2s ease-in-out infinite;
 }
 
 /* Estilo para los botones que flotan en hover */
@@ -287,29 +342,14 @@
   to { opacity: 1; }
 }
 
-@keyframes highlightPulse {
-  0% { background-color: rgba(251, 191, 36, 0); }
-  50% { background-color: rgba(251, 191, 36, 0.3); }
-  100% { background-color: rgba(251, 191, 36, 0); }
-}
-
 @keyframes orderUpdated {
   0% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
   50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
   100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-@keyframes slowBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
 .animate-fade-in {
   animation: fadeIn 0.5s ease-in-out;
-}
-
-.animate-bounce-slow {
-  animation: slowBounce 2s ease-in-out infinite;
 }
 
 .product-highlighted {
@@ -362,17 +402,6 @@
   background-color: #fef3c7;
 }
 
-/* Animación para cuando se añade un producto al carrito */
-@keyframes addedToCart {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); background-color: rgba(167, 243, 208, 0.4); }
-  100% { transform: scale(1); }
-}
-
-.added-to-cart {
-  animation: addedToCart 0.5s ease-in-out;
-}
-
 /* Efecto de ripple para botones */
 .ripple {
   position: relative;
@@ -410,4 +439,81 @@
     opacity: 0;
     transform: scale(40, 40);
   }
+}
+
+/* Animación para el checkmark cuando un producto se añade al carrito */
+@keyframes checkmark {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-checkmark {
+  animation: checkmark 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+}
+
+/* Animación mejorada para efectos de pulso */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Animación de desplazamiento suave */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mejora visual para tarjetas del menú */
+.menu-card-shadow {
+  box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1), 0 2px 4px -1px rgba(245, 158, 11, 0.06);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.menu-card-shadow:hover {
+  box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.2), 0 4px 6px -2px rgba(245, 158, 11, 0.1);
+  transform: translateY(-4px);
+}
+
+/* Animación para transiciones de menú */
+@keyframes menuTransition {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.menu-transition {
+  animation: menuTransition 0.3s ease-out forwards;
 }
