@@ -249,18 +249,99 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
   
   try {
     // Extraer el ID del producto del parámetro
-    const { productId, category } = params as any;
+    let productId: string;
+    let category: string | undefined;
+    
+    // Manejar diferentes formatos de parámetros que el modelo podría enviar
+    if (typeof params === 'string') {
+      try {
+        // Si es una cadena JSON, intentar parsearla
+        const parsed = JSON.parse(params);
+        productId = parsed.productId || '';
+        category = parsed.category;
+      } catch (e) {
+        // Si no es JSON válido, usar la cadena como ID
+        productId = params;
+      }
+    } else if (params && typeof params === 'object') {
+      // Si recibimos un objeto, intentar extraer productId
+      if ('productId' in params) {
+        productId = (params as any).productId;
+      } else if ('id' in params) {
+        productId = (params as any).id;
+      } else if ('product' in params) {
+        productId = (params as any).product;
+      } else if ('name' in params) {
+        // Si solo tenemos el nombre, intentar convertirlo a un ID válido
+        const name = (params as any).name.toLowerCase();
+        productId = name.replace(/\s+/g, '-');
+      } else {
+        // Buscar cualquier propiedad que parezca un ID
+        const keys = Object.keys(params);
+        const idKey = keys.find(k => k.toLowerCase().includes('id') || k.toLowerCase().includes('product'));
+        if (idKey) {
+          productId = (params as any)[idKey];
+        } else {
+          throw new Error("No se pudo extraer un ID de producto válido de los parámetros");
+        }
+      }
+      
+      // Intentar extraer categoría si está disponible
+      if ('category' in params) {
+        category = (params as any).category;
+      } else if ('categoryId' in params) {
+        category = (params as any).categoryId;
+      }
+    } else {
+      throw new Error("Formato de parámetros no válido");
+    }
     
     if (!productId) {
       console.error("[highlightProductTool] Error: ID de producto no proporcionado");
       return Promise.resolve("Error: ID de producto no proporcionado");
     }
     
-    console.log(`[highlightProductTool] Resaltando producto: ${productId}`);
+    // Normalizar el ID del producto
+    productId = productId.toString().toLowerCase().trim();
+    
+    // Mapeo de nombres comunes a IDs de producto
+    const productIdMappings: Record<string, string> = {
+      'pastor': 'taco-pastor',
+      'al pastor': 'taco-pastor',
+      'suadero': 'taco-suadero',
+      'taco suadero': 'taco-suadero',
+      'bistec': 'taco-bistec',
+      'taco bistec': 'taco-bistec',
+      'campechano': 'taco-campechano',
+      'taco campechano': 'taco-campechano',
+      'carnitas': 'taco-carnitas',
+      'taco carnitas': 'taco-carnitas',
+      'horchata': 'agua-horchata',
+      'agua horchata': 'agua-horchata',
+      'jamaica': 'agua-jamaica',
+      'agua jamaica': 'agua-jamaica',
+      'refresco': 'refresco',
+      'guacamole': 'guacamole',
+      'quesadilla': 'quesadilla',
+      'queso': 'queso-extra',
+      'queso extra': 'queso-extra',
+      'cebollitas': 'cebollitas'
+    };
+    
+    // Verificar si necesitamos mapear el ID
+    if (productIdMappings[productId]) {
+      console.log(`[highlightProductTool] Mapeando ID: ${productId} -> ${productIdMappings[productId]}`);
+      productId = productIdMappings[productId];
+    }
+    
+    console.log(`[highlightProductTool] Resaltando producto: ${productId}`, category ? `Categoría: ${category}` : '');
     
     // Disparar el evento highlightProduct
     const event = new CustomEvent("highlightProduct", {
-      detail: { productId }
+      detail: { 
+        productId,
+        category
+      }
     });
     
     window.dispatchEvent(event);
@@ -273,5 +354,38 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
   }
 };
 
+/**
+ * Herramienta para procesar el pago del pedido actual.
+ * Envía un evento personalizado que será capturado por el componente OrderDetails.
+ */
+export const processPaymentTool: ClientToolImplementation = (params) => {
+  console.log("[processPaymentTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[processPaymentTool] No estamos en un entorno de navegador");
+    return Promise.resolve("No se puede procesar el pago en este entorno.");
+  }
+  
+  try {
+    // Log de inicio de proceso de pago
+    console.log("[processPaymentTool] Iniciando proceso de pago");
+    
+    // Crear y disparar el evento de procesamiento de pago
+    const event = new CustomEvent("processPayment", {
+      detail: { 
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    window.dispatchEvent(event);
+    console.log("[processPaymentTool] Evento processPayment despachado correctamente");
+    
+    return Promise.resolve("Procesamiento de pago iniciado correctamente.");
+  } catch (error) {
+    console.error("[processPaymentTool] Error al procesar el pago:", error);
+    return Promise.resolve("Error al procesar el pago del pedido.");
+  }
+};
+
 // Exportamos todas las herramientas disponibles
-export const clientTools = [updateOrderTool]; 
+export const clientTools = [updateOrderTool, highlightProductTool, processPaymentTool]; 

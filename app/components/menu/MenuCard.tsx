@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlusCircle, MinusCircle, ShoppingCart, Info, Check } from 'lucide-react';
 import { MenuItem } from '@/app/lib/types';
 import { addItemToOrder } from '@/app/lib/services/orderService';
+import { playSound } from '@/app/lib/services/soundService';
 
 interface MenuCardProps {
   item: MenuItem;
@@ -53,21 +54,75 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
   // Efecto para manejar la animación de resaltado cuando el producto es destacado por el agente
   useEffect(() => {
     const handleHighlight = (event: CustomEvent) => {
-      const { productId } = event.detail as { productId: string };
-      
-      if (productId === item.id) {
-        setIsHighlighted(true);
+      try {
+        const { productId } = event.detail as { productId: string };
         
-        // Hacer scroll al elemento
-        internalRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center'
-        });
+        console.log(`[MenuCard] Evento highlightProduct recibido: ${productId}, item.id: ${item.id}`);
         
-        // Quitar el resaltado después de 2.5 segundos
-        setTimeout(() => {
-          setIsHighlighted(false);
-        }, 2500);
+        // Normalizar ambos IDs para comparación (eliminar espacios, guiones y convertir a minúsculas)
+        const normalizedProductId = productId.toLowerCase().replace(/[-\s]+/g, '');
+        const normalizedItemId = item.id.toLowerCase().replace(/[-\s]+/g, '');
+        
+        // Comprobar también si el nombre del producto está contenido en el ID
+        const itemNameNormalized = item.name.toLowerCase().replace(/[-\s]+/g, '');
+        
+        // Comprobar también por categoría para casos generales (ej: "extras")
+        const categoryMatches = normalizedProductId === item.categoryId?.toLowerCase() || 
+                              normalizedProductId.includes(item.categoryId?.toLowerCase() || '') ||
+                              (item.categoryId?.toLowerCase() || '').includes(normalizedProductId);
+        
+        // Verificar coincidencia por ID exacto o nombre
+        const isMatch = 
+          normalizedProductId === normalizedItemId || 
+          normalizedProductId.includes(normalizedItemId) || 
+          normalizedItemId.includes(normalizedProductId) ||
+          normalizedProductId.includes(itemNameNormalized) ||
+          itemNameNormalized.includes(normalizedProductId) ||
+          categoryMatches;
+        
+        if (isMatch) {
+          console.log(`[MenuCard] ¡Coincidencia encontrada! Resaltando: ${item.name} (${item.categoryId})`);
+          setIsHighlighted(true);
+          
+          // Hacer scroll al elemento con mayor prioridad visual
+          if (internalRef.current) {
+            // Aplicar un efecto más sutil
+            internalRef.current.classList.add('flash-highlight');
+            
+            // Realizar scroll de manera suave con tiempo de espera
+            setTimeout(() => {
+              if (internalRef.current) {
+                internalRef.current.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'center',
+                  inline: 'center'
+                });
+                
+                // Emitir evento para asegurar que la categoría se active correctamente
+                if (item.categoryId) {
+                  const categoryEvent = new CustomEvent('activateCategory', {
+                    detail: { category: item.categoryId }
+                  });
+                  window.dispatchEvent(categoryEvent);
+                }
+              }
+            }, 100);
+            
+            // Quitar el efecto de flash después de un tiempo
+            setTimeout(() => {
+              if (internalRef.current) {
+                internalRef.current.classList.remove('flash-highlight');
+              }
+            }, 1200);
+          }
+          
+          // Mantener el resaltado por un tiempo razonable y luego quitarlo gradualmente
+          setTimeout(() => {
+            setIsHighlighted(false);
+          }, 4000);
+        }
+      } catch (error) {
+        console.error('[MenuCard] Error al procesar evento highlightProduct:', error);
       }
     };
     
@@ -76,7 +131,7 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
     return () => {
       window.removeEventListener('highlightProduct', handleHighlight as EventListener);
     };
-  }, [item.id]);
+  }, [item.id, item.name, item.categoryId]);
   
   // Formatear precio como moneda
   const formatCurrency = (amount: number) => {
@@ -100,22 +155,8 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
     setIsAddingToCart(true);
     
     try {
-      // Reproducir sonido al añadir al carrito si existe el elemento audio de forma segura
-      const addToCartSound = document.querySelector('audio[src*="add-to-cart"]');
-      if (addToCartSound && addToCartSound instanceof HTMLAudioElement) {
-        addToCartSound.pause();
-        addToCartSound.currentTime = 0;
-        
-        // Usar promesa con manejo de errores para evitar bloqueos
-        const playPromise = addToCartSound.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(err => {
-            console.log('Error al reproducir sonido de añadir al carrito:', err);
-            // El navegador no permite reproducir audio sin interacción del usuario
-          });
-        }
-      }
+      // Reproducir sonido al añadir al carrito
+      playSound('add-to-cart', 0.7);
       
       // Llamar al servicio de pedidos
       addItemToOrder(item.id, quantity, specialInstructions || undefined);
@@ -164,7 +205,7 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
         <img 
           src={item.imageUrl}
           alt={item.name}
-          className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             if (target && target.style) {
@@ -177,18 +218,71 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
         />
       );
     } else {
-      // Emojis basados en categoría para productos sin imagen
-      let emoji = '🌮';
-      if (item.categoryId.includes('drink') || item.categoryId.includes('bebida')) {
-        emoji = '🥤';
-      } else if (item.categoryId.includes('dessert') || item.categoryId.includes('postre')) {
-        emoji = '🍰';
-      } else if (item.categoryId.includes('side') || item.categoryId.includes('complemento')) {
-        emoji = '🍟';
+      // Usar el emoji proporcionado en el objeto item directamente si existe
+      let emoji = item.imageUrl || '🌮'; // Emoji por defecto para tacos
+      
+      // Si no hay emoji específico, intentar identificar por ID y categoría
+      if (!emoji || emoji === '') {
+        // Primero intentar identificar por ID específico (más preciso)
+        if (item.id) {
+          switch(item.id.toLowerCase()) {
+            // Tacos específicos
+            case 'taco-pastor':
+            case 'taco-suadero':
+            case 'taco-bistec':
+            case 'taco-campechano':
+            case 'taco-carnitas':
+              emoji = '🌮';
+              break;
+              
+            // Bebidas específicas
+            case 'agua-horchata':
+              emoji = '🥛';
+              break;
+            case 'agua-jamaica':
+              emoji = '🧃';
+              break;
+            case 'jugo-manzana':
+              emoji = '🧃';
+              break;
+            case 'refresco':
+              emoji = '🥤';
+              break;
+              
+            // Extras específicos
+            case 'guacamole':
+              emoji = '🥑';
+              break;
+            case 'quesadilla':
+              emoji = '🧀';
+              break;
+            case 'queso-extra':
+              emoji = '🧀';
+              break;
+            case 'cebollitas':
+              emoji = '🧅';
+              break;
+          }
+        }
+        
+        // Si no se encontró un emoji específico por ID, intentar por categoría
+        if (emoji === '🌮' && item.categoryId) {
+          switch(item.categoryId.toLowerCase()) {
+            case 'tacos':
+              emoji = '🌮';
+              break;
+            case 'bebidas':
+              emoji = '🥤';
+              break;
+            case 'extras':
+              emoji = '🍽️';
+              break;
+          }
+        }
       }
       
       return (
-        <span className="text-6xl transform hover:scale-125 transition-transform duration-300">
+        <span className="text-6xl transform hover:scale-110 transition-transform duration-300">
           {emoji}
         </span>
       );
@@ -197,13 +291,19 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
   
   return (
     <div 
-      className={`product-card bg-white rounded-xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-lg transition-all duration-300 ${isHighlighted ? 'highlight-pulse border-amber-400 shadow-amber-300' : ''}`}
-      style={{ 
-        animationDelay: `${index * 0.08}s`, 
-        opacity: 0, 
-        animation: 'fadeIn 0.5s ease forwards'
-      }}
+      className={`product-card bg-white rounded-xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-lg transition-all duration-300 ${
+        isHighlighted ? 'highlight-pulse border-amber-400 shadow-amber-300' : ''
+      }`}
       ref={internalRef}
+      style={{
+        opacity: item.available ? '1' : '0.5',
+        /* Estilos sutiles para el resaltado sin animaciones abruptas */
+        ...(isHighlighted ? {
+          boxShadow: '0 0 10px rgba(251, 191, 36, 0.5)',
+          transform: 'scale(1.02)',
+          transition: 'all 0.5s ease-in-out'
+        } : {}),
+      }}
       data-product-id={item.id}
     >
       <div className="relative overflow-hidden">
@@ -243,7 +343,7 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-bold text-amber-900 text-lg">{item.name}</h3>
-          <span className="font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm shadow-sm hover:scale-105 transition-transform">
+          <span className="price-tag font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm shadow-sm hover:scale-105 transition-transform">
             {formatCurrency(item.price)}
           </span>
         </div>

@@ -210,4 +210,43 @@ function getItemIdFromName(name: string): string {
     .replace(/\s+/g, '-')       // Reemplazar espacios con guiones
     .replace(/[^a-z0-9-]/g, '') // Eliminar caracteres especiales
     .replace(/-+/g, '-');       // Evitar guiones múltiples
-} 
+}
+
+/**
+ * Herramienta para procesar el pago del pedido actual.
+ * Envía un evento personalizado que será capturado por el componente OrderDetails.
+ */
+export const processPaymentTool: ClientToolImplementation = (params) => {
+  console.log("[processPaymentTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[processPaymentTool] No estamos en un entorno de navegador");
+    return "No se puede procesar el pago en este entorno.";
+  }
+  
+  // Verificar si hay un pedido actual
+  const currentOrder = getCurrentOrder();
+  if (!currentOrder || currentOrder.items.length === 0) {
+    console.warn("[processPaymentTool] No hay pedido activo o está vacío");
+    return "No hay pedido activo para procesar el pago.";
+  }
+  
+  try {
+    // Crear y disparar el evento de procesamiento de pago
+    const event = new CustomEvent("processPayment", {
+      detail: { 
+        timestamp: new Date().toISOString(),
+        orderId: currentOrder.id,
+        totalAmount: currentOrder.totalAmount
+      }
+    });
+    
+    window.dispatchEvent(event);
+    console.log("[processPaymentTool] Evento processPayment despachado correctamente");
+    
+    return `Procesamiento de pago iniciado para el pedido #${currentOrder.id}. Total: ${currentOrder.totalAmount} MXN`;
+  } catch (error) {
+    console.error("[processPaymentTool] Error al procesar el pago:", error);
+    return "Error al procesar el pago del pedido.";
+  }
+}; 

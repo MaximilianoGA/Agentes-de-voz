@@ -208,23 +208,43 @@
 /* Animación de resaltado para producto resaltado por el agente */
 @keyframes highlightPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.4);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 10px 5px rgba(251, 191, 36, 0.5);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.7);
     transform: scale(1.02);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.4);
     transform: scale(1);
   }
 }
 
 /* Clase para activar la animación de destacado */
 .highlight-pulse {
-  animation: highlightPulse 1.5s ease-in-out infinite;
-  border-color: #fbbf24 !important;
+  animation: highlightPulse 2s ease-in-out infinite;
+}
+
+/* Efecto flash para destacar productos */
+@keyframes flashHighlight {
+  0% {
+    background-color: rgba(251, 191, 36, 0);
+  }
+  30% {
+    background-color: rgba(251, 191, 36, 0.15);
+  }
+  70% {
+    background-color: rgba(251, 191, 36, 0.15);
+  }
+  100% {
+    background-color: rgba(251, 191, 36, 0);
+  }
+}
+
+.flash-highlight {
+  animation: flashHighlight 1.2s ease-in-out;
+  border: 2px solid rgba(245, 158, 11, 0.7) !important;
 }
 
 /* Animación de añadido al carrito */
@@ -278,7 +298,7 @@
   transform: translateY(-3px);
 }
 
-/* Estilo para tarjetas de productos */
+/* Estilos para las tarjetas de productos y precios */
 .product-card {
   transition: all 0.3s ease;
   animation: fadeIn 0.5s ease-out;
@@ -287,6 +307,14 @@
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilo para asegurar que los precios se muestren correctamente en un solo renglón */
+.product-card .price-tag {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Animación para el total cuando cambia */

@@ -370,16 +370,20 @@ export default function Home() {
   };
 
   const handleEndCallButtonClick = async () => {
-    try {
-      handleStatusChange('Ending call...');
-      await endCall();
-      setIsCallActive(false);
-
-      clearCustomerProfile();
-      setCustomerProfileKey(null);
-      handleStatusChange('Call ended successfully');
-    } catch (error) {
-      handleStatusChange(`Error ending call: ${error instanceof Error ? error.message : String(error)}`);
+    setAgentStatus("off");
+    if (isCallActive) {
+      try {
+        endCall();
+        setIsCallActive(false);
+        setCallTranscript([]);
+        setCallDebugMessages([]);
+        setCustomerProfileKey(null);
+        handleStatusChange('Llamada finalizada con éxito');
+        console.log("Llamada finalizada con éxito");
+      } catch (error) {
+        console.error('Error al finalizar la llamada:', error);
+        handleStatusChange('Error al finalizar la llamada');
+      }
     }
   };
 

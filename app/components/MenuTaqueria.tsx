@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { OrderItem, MenuItem } from '@/app/lib/types';
 import { Utensils, Coffee, Pizza, ShoppingBag, Search, PlusCircle, MinusCircle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { playSound } from '@/app/lib/services/soundService';
 
 // Importación dinámica del MenuCard para evitar problemas de hidratación
 const MenuCard = dynamic(() => import('./menu/MenuCard'), { ssr: false });
@@ -15,7 +16,7 @@ const menuItems: MenuItem[] = [
     name: 'Taco al Pastor',
     description: 'Delicioso taco de cerdo marinado con piña',
     price: 15.00,
-    imageUrl: '', // Se usará un emoji en su lugar
+    imageUrl: '🌮',
     categoryId: 'tacos',
     available: true,
     featured: true,
@@ -26,7 +27,7 @@ const menuItems: MenuItem[] = [
     name: 'Taco de Suadero',
     description: 'Taco tradicional con carne de res suave',
     price: 17.00,
-    imageUrl: '',
+    imageUrl: '🌮',
     categoryId: 'tacos',
     available: true,
     allergens: []
@@ -36,7 +37,7 @@ const menuItems: MenuItem[] = [
     name: 'Taco de Bistec',
     description: 'Taco con carne de res a la plancha',
     price: 18.00,
-    imageUrl: '',
+    imageUrl: '🌮',
     categoryId: 'tacos',
     available: true,
     allergens: []
@@ -46,7 +47,7 @@ const menuItems: MenuItem[] = [
     name: 'Taco Campechano',
     description: 'Mezcla de bistec y chorizo en taco',
     price: 20.00,
-    imageUrl: '',
+    imageUrl: '🌮',
     categoryId: 'tacos',
     available: true,
     allergens: []
@@ -56,7 +57,7 @@ const menuItems: MenuItem[] = [
     name: 'Taco de Carnitas',
     description: 'Taco con carne de cerdo cocinado lentamente',
     price: 20.00,
-    imageUrl: '',
+    imageUrl: '🌮',
     categoryId: 'tacos',
     available: true,
     allergens: []
@@ -66,7 +67,7 @@ const menuItems: MenuItem[] = [
     name: 'Agua de Horchata',
     description: 'Bebida refrescante de arroz con canela',
     price: 25.00,
-    imageUrl: '',
+    imageUrl: '🥛',
     categoryId: 'bebidas',
     available: true,
     allergens: ['Lácteos'],
@@ -78,18 +79,18 @@ const menuItems: MenuItem[] = [
     }
   },
   {
-    id: 'agua-jamaica',
-    name: 'Agua de Jamaica',
-    description: 'Tradicional agua de flor de jamaica',
+    id: 'jugo-manzana',
+    name: 'Jugo de Manzana',
+    description: 'Refrescante jugo natural de manzana',
     price: 25.00,
-    imageUrl: '',
+    imageUrl: '🧃',
     categoryId: 'bebidas',
     available: true,
     allergens: [],
     nutritionalInfo: {
-      calories: 90,
+      calories: 120,
       protein: 0,
-      carbs: 22,
+      carbs: 30,
       fat: 0
     }
   },
@@ -98,7 +99,7 @@ const menuItems: MenuItem[] = [
     name: 'Refresco',
     description: 'Bebida gaseosa de varios sabores',
     price: 20.00,
-    imageUrl: '',
+    imageUrl: '🥤',
     categoryId: 'bebidas',
     available: true,
     allergens: []
@@ -108,28 +109,18 @@ const menuItems: MenuItem[] = [
     name: 'Guacamole',
     description: 'Dip tradicional de aguacate con totopos',
     price: 35.00,
-    imageUrl: '',
+    imageUrl: '🥑',
     categoryId: 'extras',
     available: true,
     featured: true,
     allergens: []
   },
   {
-    id: 'quesadilla',
-    name: 'Quesadilla',
-    description: 'Tortilla de maíz con queso derretido',
-    price: 30.00,
-    imageUrl: '',
-    categoryId: 'extras',
-    available: true,
-    allergens: ['Lácteos', 'Gluten']
-  },
-  {
     id: 'queso-extra',
     name: 'Queso Extra',
     description: 'Porción extra de queso fresco',
     price: 15.00,
-    imageUrl: '',
+    imageUrl: '🧀',
     categoryId: 'extras',
     available: true,
     allergens: ['Lácteos']
@@ -139,9 +130,9 @@ const menuItems: MenuItem[] = [
     name: 'Orden de Cebollitas',
     description: 'Cebollitas de cambray asadas con limón',
     price: 25.00,
-    imageUrl: '',
+    imageUrl: '🧅',
     categoryId: 'extras',
-    available: false,
+    available: true,
     allergens: []
   }
 ];
@@ -240,79 +231,24 @@ const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange
     }
   };
   
-  // Función para reproducir sonido de menú de forma segura
+  // Reproducir sonido al cambiar categoría
   const playMenuSound = (category: string) => {
-    if (menuSoundRef.current) {
-      menuSoundRef.current.pause();
-      menuSoundRef.current.currentTime = 0;
-      
-      // Usar promesa con manejo de errores para evitar bloqueos
-      const playPromise = menuSoundRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.log('Error al reproducir sonido de menú:', err);
-          // El navegador no permite reproducir audio sin interacción del usuario
-        });
-      }
-    }
+    playSound('menu-change', 0.6);
   };
   
-  // Función para reproducir sonido al añadir al carrito de forma segura
+  // Reproducir sonido al añadir al carrito
   const playAddToCartSound = () => {
-    if (addToCartSoundRef.current) {
-      addToCartSoundRef.current.pause();
-      addToCartSoundRef.current.currentTime = 0;
-      
-      // Usar promesa con manejo de errores para evitar bloqueos
-      const playPromise = addToCartSoundRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.log('Error al reproducir sonido de carrito:', err);
-          // El navegador no permite reproducir audio sin interacción del usuario
-        });
-      }
-    }
+    playSound('add-to-cart', 0.7);
   };
   
-  // Función para reproducir sonido de destacado de forma segura
+  // Reproducir sonido al resaltar producto
   const playHighlightSound = () => {
-    if (highlightSoundRef.current) {
-      highlightSoundRef.current.pause();
-      highlightSoundRef.current.currentTime = 0;
-      
-      // Usar promesa con manejo de errores para evitar bloqueos
-      const playPromise = highlightSoundRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.log('Error al reproducir sonido de destacado:', err);
-          // El navegador no permite reproducir audio sin interacción del usuario
-        });
-      }
-    }
+    playSound('highlight', 0.5);
   };
   
-  // Función para reproducir sonido de navegación de forma segura
+  // Reproducir sonido de navegación
   const playNavigationSound = () => {
-    if (menuSoundRef.current) {
-      menuSoundRef.current.volume = 0.3; // Volumen más bajo para navegación
-      menuSoundRef.current.pause();
-      menuSoundRef.current.currentTime = 0;
-      
-      // Usar promesa con manejo de errores para evitar bloqueos
-      const playPromise = menuSoundRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          console.log('Error al reproducir sonido de navegación:', err);
-          // El navegador no permite reproducir audio sin interacción del usuario
-        });
-      }
-      
-      menuSoundRef.current.volume = 1.0; // Restaurar volumen
-    }
+    playSound('menu-change', 0.4);
   };
   
   // Mostrar un mensaje cuando no hay elementos para mostrar
@@ -359,6 +295,7 @@ const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange
         if (product && product.categoryId) {
           // Cambiar a la categoría del producto
           onCategoryChange(product.categoryId);
+          setInternalActiveCategory(product.categoryId as 'tacos' | 'bebidas' | 'extras');
         }
         
         // Destacar el producto
@@ -382,12 +319,47 @@ const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange
       }
     };
 
+    // Escuchar el evento 'activateCategory'
+    const handleActivateCategory = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { category } = customEvent.detail;
+      
+      console.log(`[MenuTaqueria] Activando categoría: ${category}`);
+      
+      if (category && ['tacos', 'bebidas', 'extras'].includes(category)) {
+        // Cambiar a la categoría solicitada
+        onCategoryChange(category);
+        setInternalActiveCategory(category as 'tacos' | 'bebidas' | 'extras');
+        
+        // Reproducir sonido de cambio de menú
+        playMenuSound(category);
+        
+        // Asegurar que los controles de navegación estén actualizados
+        setTimeout(() => {
+          const checkScrollability = () => {
+            if (productContainerRef.current) {
+              const container = productContainerRef.current.querySelector('.overflow-x-auto');
+              if (container) {
+                setCanScrollLeft(container.scrollLeft > 0);
+                setCanScrollRight(
+                  container.scrollLeft < container.scrollWidth - container.clientWidth - 5
+                );
+              }
+            }
+          };
+          checkScrollability();
+        }, 500);
+      }
+    };
+
     window.addEventListener('highlightProduct', handleHighlightProduct);
+    window.addEventListener('activateCategory', handleActivateCategory);
     
     return () => {
       window.removeEventListener('highlightProduct', handleHighlightProduct);
+      window.removeEventListener('activateCategory', handleActivateCategory);
     };
-  }, [onCategoryChange]);
+  }, [onCategoryChange, playMenuSound, playHighlightSound]);
 
   return (
     <div className="flex flex-col h-full">
@@ -532,22 +504,6 @@ const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange
           renderEmptyState()
         )}
       </div>
-
-      {/* Efectos de sonido */}
-      <audio ref={menuSoundRef} className="hidden">
-        <source src="/sounds/menu-change.mp3" type="audio/mpeg" />
-        Your browser does not support the audio element.
-      </audio>
-      
-      <audio ref={addToCartSoundRef} className="hidden">
-        <source src="/sounds/add-to-cart.mp3" type="audio/mpeg" />
-        Your browser does not support the audio element.
-      </audio>
-      
-      <audio ref={highlightSoundRef} className="hidden">
-        <source src="/sounds/highlight.mp3" type="audio/mpeg" />
-        Your browser does not support the audio element.
-      </audio>
     </div>
   );
 };

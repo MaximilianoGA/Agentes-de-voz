@@ -126,15 +126,15 @@ export default function Home() {
 
   const handleEndCallButtonClick = async () => {
     try {
-      handleStatusChange('Ending call...');
+      handleStatusChange('Finalizando llamada...');
       await endCall();
       setIsCallActive(false);
 
       clearCustomerProfile();
       setCustomerProfileKey(null);
-      handleStatusChange('Call ended successfully');
+      handleStatusChange('Llamada finalizada con éxito');
     } catch (error) {
-      handleStatusChange(`Error ending call: ${error instanceof Error ? error.message : String(error)}`);
+      handleStatusChange(`Error al finalizar la llamada: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 

@@ -1,14 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ShoppingCart, Trash2, ShoppingBag, Coffee, Pizza, Utensils, 
   MessageCircle, CheckCircle, Soup, GlassWater, CupSoda, 
-  Cherry, ChefHat, Sandwich, Beef, Salad, BadgeDollarSign
+  Cherry, ChefHat, Sandwich, Beef, Salad, BadgeDollarSign,
+  Trash
 } from 'lucide-react';
 import { clearCurrentOrderAndSync, removeItemFromOrderAndSync } from '../lib/services/orderService';
+import PaymentForm, { PaymentFormData } from './PaymentForm';
 
-interface OrderDetail {
+// Función para formatear precios
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+interface OrderItem {
   name: string;
   quantity: number;
   price: number;
@@ -18,162 +29,165 @@ interface OrderDetail {
 }
 
 const OrderDetails = () => {
-  const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isPaying, setIsPaying] = useState(false);
+  const [order, setOrder] = useState<OrderItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const orderRef = useRef<HTMLDivElement>(null);
   const [animatingItemId, setAnimatingItemId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Cargar el pedido guardado si existe
+    // Intentar cargar pedidos guardados de localStorage
     try {
-      const savedOrder = localStorage.getItem('orderDetails');
-      console.log('Cargando orden guardada:', savedOrder);
+      const savedOrder = localStorage.getItem("currentOrder") || localStorage.getItem("orderDetails");
       if (savedOrder) {
         const parsedOrder = JSON.parse(savedOrder);
-        if (Array.isArray(parsedOrder) && parsedOrder.length > 0) {
-          setOrderDetails(parsedOrder);
-          
-          // Calcular el total del pedido cargado
-          const total = parsedOrder.reduce((acc, item) => {
-            return acc + (item.quantity * item.price);
-          }, 0);
-          setTotal(total);
+        if (Array.isArray(parsedOrder)) {
+          setOrder(parsedOrder);
         }
       }
     } catch (error) {
-      console.error('Error al cargar el pedido guardado:', error);
+      console.error("Error al cargar pedidos guardados:", error);
     }
-    
-    // Configurar el detector de eventos para actualizaciones de pedidos
+
+    // Función para manejar actualizaciones de pedido
     const handleOrderUpdate = (event: CustomEvent) => {
       try {
-        const updatedOrder = event.detail;
-        console.log('Evento orderDetailsUpdated recibido:', updatedOrder);
+        console.log("Evento orderDetailsUpdated recibido:", event.detail);
         
-        if (typeof updatedOrder === 'string') {
-          try {
-            const parsedOrder = JSON.parse(updatedOrder);
-            if (Array.isArray(parsedOrder)) {
-              // Detectar elementos nuevos para animarlos
-              if (orderDetails.length < parsedOrder.length) {
-                setAnimatingItemId(parsedOrder.length - 1);
-                setTimeout(() => setAnimatingItemId(null), 1000);
-              }
-              
-              setOrderDetails(parsedOrder);
-              
-              // Calcular el nuevo total
-              const total = parsedOrder.reduce((acc, item) => {
-                return acc + (item.quantity * item.price);
-              }, 0);
-              setTotal(total);
-              
-              // Resetear estado de pago si cambia el pedido
-              if (paymentSuccess) {
-                setPaymentSuccess(false);
-              }
-              
-              // Añadir efecto de actualización
-              if (orderRef.current) {
-                orderRef.current.classList.add('order-updated');
-                setTimeout(() => {
-                  if (orderRef.current) {
-                    orderRef.current.classList.remove('order-updated');
-                  }
-                }, 1000);
-              }
-            }
-          } catch (parseError) {
-            console.error('Error al parsear los detalles del pedido:', parseError);
+        let updatedOrder: OrderItem[];
+        
+        if (typeof event.detail === 'string') {
+          updatedOrder = JSON.parse(event.detail);
+        } else if (Array.isArray(event.detail)) {
+          updatedOrder = event.detail;
+        } else if (event.detail && typeof event.detail === 'object') {
+          // Intenta extraer los datos si están en un objeto con alguna propiedad conocida
+          if (Array.isArray(event.detail.orderItems)) {
+            updatedOrder = event.detail.orderItems;
+          } else {
+            console.warn("Formato de datos desconocido:", event.detail);
+            return;
           }
+        } else {
+          console.warn("Formato de datos desconocido:", event.detail);
+          return;
         }
+        
+        // Validar y normalizar los items del pedido
+        const validatedOrder = updatedOrder.map(item => ({
+          name: item.name || "Producto sin nombre",
+          quantity: Number(item.quantity) || 1,
+          price: Number(item.price) || 0,
+          specialInstructions: item.specialInstructions || ""
+        }));
+        
+        setOrder(validatedOrder);
+        localStorage.setItem("currentOrder", JSON.stringify(validatedOrder));
       } catch (error) {
-        console.error('Error al procesar la actualización del pedido:', error);
+        console.error("Error al procesar actualización de pedido:", error);
       }
     };
 
-    window.addEventListener('orderDetailsUpdated', handleOrderUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('orderDetailsUpdated', handleOrderUpdate as EventListener);
+    // Función para manejar peticiones de procesamiento de pago
+    const handleProcessPayment = () => {
+      console.log("Procesando pago...");
+      setIsPaymentOpen(true);
     };
-  }, [orderDetails.length, paymentSuccess]);
+
+    // Función para manejar finalización de llamada
+    const handleCallEnded = () => {
+      console.log("Llamada finalizada - limpiando estado");
+      clearOrder();
+      setPaymentSuccess(false);
+    };
+
+    // Agregar escuchadores de eventos
+    window.addEventListener("orderDetailsUpdated", handleOrderUpdate as EventListener);
+    window.addEventListener("processPayment", handleProcessPayment);
+    window.addEventListener("callEnded", handleCallEnded);
+
+    // Limpiar escuchadores al desmontar
+    return () => {
+      window.removeEventListener("orderDetailsUpdated", handleOrderUpdate as EventListener);
+      window.removeEventListener("processPayment", handleProcessPayment);
+      window.removeEventListener("callEnded", handleCallEnded);
+    };
+  }, []);
+
+  useEffect(() => {
+    const calculatedTotal = order.reduce((sum, item) => {
+      const itemPrice = Number(item.price) || 0;
+      const itemQuantity = Number(item.quantity) || 1;
+      return sum + (itemPrice * itemQuantity);
+    }, 0);
+    
+    setTotal(calculatedTotal);
+  }, [order]);
+
+  const removeItem = (index: number) => {
+    const updatedOrder = [...order];
+    updatedOrder.splice(index, 1);
+    setOrder(updatedOrder);
+    localStorage.setItem("currentOrder", JSON.stringify(updatedOrder));
+    
+    // Disparar evento de actualización
+    const event = new CustomEvent("orderDetailsUpdated", {
+      detail: JSON.stringify(updatedOrder),
+    });
+    window.dispatchEvent(event);
+  };
 
   const clearOrder = () => {
-    if (isPaying || paymentSuccess) return;
-    
-    // Usar el servicio para limpiar la orden
-    clearCurrentOrderAndSync();
-    setOrderDetails([]);
-    setTotal(0);
+    setOrder([]);
+    localStorage.removeItem("currentOrder");
+    localStorage.removeItem("orderDetails");
+    setIsPaymentOpen(false);
   };
 
-  const removeItem = (itemId: string, index: number) => {
-    if (isPaying || paymentSuccess) return;
-    
-    if (!itemId) {
-      // Fallback para cuando no tenemos ID (usar el enfoque anterior)
-      const updatedOrder = [...orderDetails];
-      updatedOrder.splice(index, 1);
-      setOrderDetails(updatedOrder);
-      
-      // Recalcular total
-      const newTotal = updatedOrder.reduce((acc, item) => acc + (item.quantity * item.price), 0);
-      setTotal(newTotal);
-      
-      // Actualizar localStorage
-      const updatedOrderJson = JSON.stringify(updatedOrder);
-      localStorage.setItem('orderDetails', updatedOrderJson);
-      
-      // Emitir evento de orden actualizada
-      const customEvent = new CustomEvent('orderDetailsUpdated', {
-        detail: updatedOrderJson
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
+    setIsPaymentOpen(false);
+    clearOrder();
+  };
+
+  // Manejar entrada de datos de pago por voz
+  const handleVoicePaymentInput = useCallback((field: string, value: string) => {
+    if (typeof window !== "undefined" && isPaymentOpen) {
+      // Crear y disparar un evento para el formulario de pago
+      const event = new CustomEvent('voicePaymentInput', {
+        detail: { field, value }
       });
-      window.dispatchEvent(customEvent);
-    } else {
-      // Usar el servicio para eliminar el ítem
-      removeItemFromOrderAndSync(itemId);
+      window.dispatchEvent(event);
+      console.log(`[OrderDetails] Enviando dato de pago por voz: ${field} = ${value}`);
     }
-  };
+  }, [isPaymentOpen]);
 
-  const processPayment = () => {
-    if (orderDetails.length === 0 || isPaying || paymentSuccess) return;
-    
-    setIsPaying(true);
-    
-    // Simular procesamiento de pago
-    setTimeout(() => {
-      setIsPaying(false);
-      setPaymentSuccess(true);
+  // Añadir detector para comandos de voz relacionados con datos de pago
+  useEffect(() => {
+    const handleVoiceCommand = (event: CustomEvent) => {
+      const { command, data } = event.detail;
       
-      // Después de 3 segundos, limpiar el pedido
-      setTimeout(() => {
-        clearOrder();
-        setPaymentSuccess(false);
-      }, 3000);
-    }, 1500);
-  };
-
-  const formatCurrency = (amount: number) => {
-    // Modificación para voz: separar el número y la moneda con un espacio
-    // y eliminar decimales cuando no son necesarios para mejorar la lectura
-    const hasDecimals = amount % 1 !== 0;
-    const formatted = new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: hasDecimals ? 2 : 0,
-      maximumFractionDigits: hasDecimals ? 2 : 0
-    }).format(amount);
+      if (command === 'paymentInput' && data && typeof data === 'object') {
+        const { field, value } = data;
+        if (field && value) {
+          handleVoicePaymentInput(field, value);
+        }
+      } else if (command === 'completePayment' && isPaymentOpen) {
+        // Disparar evento para completar el proceso de pago
+        window.dispatchEvent(new CustomEvent('voicePaymentProcess'));
+      }
+    };
     
-    // Reemplazar el símbolo de peso pegado al número por uno con espacio
-    // para mejorar la lectura del asistente de voz
-    return formatted.replace('$', '$ ');
-  };
+    window.addEventListener('voiceCommand', handleVoiceCommand as EventListener);
+    
+    return () => {
+      window.removeEventListener('voiceCommand', handleVoiceCommand as EventListener);
+    };
+  }, [isPaymentOpen, handleVoicePaymentInput]);
 
   // Determinar el icono adecuado según el ID o categoría del producto
-  const getProductIcon = (item: OrderDetail) => {
+  const getProductIcon = (item: OrderItem) => {
     // Primero revisar por ID específico para mayor precisión
     if (item.id) {
       // Tacos
@@ -242,25 +256,46 @@ const OrderDetails = () => {
   };
 
   return (
-    <div ref={orderRef} className="bg-white rounded-lg shadow-lg p-5 h-full flex flex-col animate-fade-in">
-      <div className="bg-gradient-to-r from-amber-600 to-amber-500 rounded-t-lg -mt-5 -mx-5 p-4 mb-4">
-        <h2 className="text-xl font-bold text-white flex items-center">
-          <ShoppingCart className="mr-2 text-2xl animate-pulse-slow" /> 
-          Detalles del Pedido
-        </h2>
+    <div 
+      className="bg-white rounded-lg shadow-lg overflow-hidden border border-amber-100"
+      ref={orderRef}
+    >
+      <div className="bg-gradient-to-r from-amber-600 to-amber-500 p-4 flex justify-between items-center">
+        <div className="flex items-center text-white">
+          <ShoppingCart size={20} className="mr-2" />
+          <h2 className="text-xl font-bold">Detalles del Pedido</h2>
+        </div>
+        <button
+          onClick={clearOrder}
+          className="text-white p-1 rounded-full hover:bg-amber-700 transition-colors"
+          disabled={isPaymentOpen || paymentSuccess || order.length === 0}
+          title="Limpiar pedido"
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
       
       {/* Pago exitoso */}
       {paymentSuccess && (
-        <div className="flex-grow flex flex-col items-center justify-center text-green-500 animate-fade-in">
+        <div className="flex-grow flex flex-col items-center justify-center py-8 animate-fade-in">
           <CheckCircle className="text-6xl mb-3 text-green-500 animate-bounce-slow" />
-          <p className="text-lg font-medium">¡Pago procesado con éxito!</p>
-          <p className="text-sm mt-2 text-center">Tu pedido ha sido enviado a cocina</p>
+          <p className="text-lg font-semibold text-green-700">¡Pedido registrado con éxito!</p>
+          <p className="text-sm mt-2 text-center text-green-600 mb-4">Tu pedido ha sido enviado a cocina</p>
+          <button 
+            onClick={() => {
+              clearOrder();
+              setPaymentSuccess(false);
+            }}
+            className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors shadow-sm flex items-center"
+          >
+            <ShoppingBag className="mr-2" size={18} />
+            Iniciar nuevo pedido
+          </button>
         </div>
       )}
       
       {/* Carrito vacío */}
-      {!paymentSuccess && orderDetails.length === 0 && (
+      {!paymentSuccess && order.length === 0 && (
         <div className="flex-grow flex flex-col items-center justify-center text-gray-500">
           <ShoppingCart className="text-6xl mb-3 text-amber-300 animate-bounce-slow" />
           <p className="text-lg font-medium">Tu pedido está vacío</p>
@@ -269,55 +304,63 @@ const OrderDetails = () => {
       )}
       
       {/* Productos en el carrito */}
-      {!paymentSuccess && orderDetails.length > 0 && (
+      {!paymentSuccess && order.length > 0 && (
         <>
-          <div className="flex-grow overflow-auto order-items-container">
-            {orderDetails.map((item, index) => (
-              <div 
-                key={index} 
-                className={`mb-3 p-3 border border-gray-100 rounded-lg shadow-sm hover-float product-card bg-white flex flex-col transition-all duration-300 ${
-                  animatingItemId === index ? 'scale-105 border-amber-300 shadow-md' : ''
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex-grow flex items-center">
-                    <div className="h-10 w-10 mr-3 bg-amber-50 rounded-full flex items-center justify-center">
-                      {getProductIcon(item)}
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex flex-col">
-                        <div className="font-medium text-amber-800">{item.name}</div>
-                        <div className="flex justify-between items-center mt-1">
-                          <p className="text-sm text-gray-600">
-                            <span className="font-semibold">{item.quantity}</span> × {formatCurrency(item.price)}
-                          </p>
-                          <p className="font-semibold text-amber-700">
-                            {formatCurrency(item.quantity * item.price)}
-                          </p>
+          <div className="flex flex-col h-full">
+            {/* Encabezado */}
+            <div className="bg-amber-50 p-3 rounded-t-lg border-b border-amber-100">
+              <h2 className="text-lg font-semibold text-amber-800">Detalle del Pedido</h2>
+            </div>
+            
+            {/* Contenedor de elementos del pedido */}
+            <div className="max-h-[400px] overflow-y-auto order-items-container p-3">
+              {order.map((item, index) => (
+                <div 
+                  key={index} 
+                  className={`mb-3 p-3 border border-gray-100 rounded-lg shadow-sm hover-float product-card bg-white flex flex-col transition-all duration-300 ${
+                    animatingItemId === index ? 'scale-105 border-amber-300 shadow-md' : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex-grow flex items-center">
+                      <div className="h-10 w-10 mr-3 bg-amber-50 rounded-full flex items-center justify-center">
+                        {getProductIcon(item)}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="flex flex-col">
+                          <div className="font-medium text-amber-800">{item.name}</div>
+                          <div className="flex justify-between items-center mt-1">
+                            <p className="text-sm text-gray-600">
+                              <span className="font-semibold">{item.quantity}</span> × {formatCurrency(item.price)}
+                            </p>
+                            <p className="font-semibold text-amber-700">
+                              {formatCurrency(item.quantity * item.price)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <button 
+                      onClick={() => removeItem(index)}
+                      className={`ml-2 text-gray-400 hover:text-red-500 transition-colors ${isPaymentOpen ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      aria-label="Eliminar producto"
+                      disabled={isPaymentOpen}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => removeItem(item.id || '', index)}
-                    className={`ml-2 text-gray-400 hover:text-red-500 transition-colors ${isPaying ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    aria-label="Eliminar producto"
-                    disabled={isPaying}
-                  >
-                    <Trash2 size={20} className="hover:rotate-12 transition-transform" />
-                  </button>
-                </div>
-                
-                {item.specialInstructions && (
-                  <div className="mt-2 pl-12 pr-2">
-                    <div className="p-2 bg-amber-50 rounded-md text-sm text-gray-700 flex items-start">
-                      <MessageCircle size={16} className="text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <p>{item.specialInstructions}</p>
+                  
+                  {item.specialInstructions && (
+                    <div className="mt-2 pl-12 pr-2">
+                      <div className="p-2 bg-amber-50 rounded-md text-sm text-gray-700 flex items-start">
+                        <MessageCircle size={16} className="text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <p>{item.specialInstructions}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
           
           <div className="border-t border-gray-200 pt-4 mt-4">
@@ -330,9 +373,9 @@ const OrderDetails = () => {
               <button 
                 onClick={clearOrder}
                 className={`btn px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors hover:shadow-sm ${
-                  isPaying ? 'opacity-50 cursor-not-allowed' : ''
+                  isPaymentOpen ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-                disabled={isPaying}
+                disabled={isPaymentOpen}
               >
                 <span className="flex items-center">
                   <Trash2 size={18} className="mr-2" />
@@ -341,27 +384,37 @@ const OrderDetails = () => {
               </button>
               
               <button 
-                onClick={processPayment}
+                onClick={() => setIsPaymentOpen(true)}
                 className={`btn ripple bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md shadow-md transition-all flex items-center hover:scale-105 ${
-                  isPaying ? 'opacity-75 cursor-wait' : ''
+                  isPaymentOpen ? 'opacity-75 cursor-wait' : ''
                 }`}
-                disabled={isPaying}
+                disabled={isPaymentOpen}
               >
-                {isPaying ? (
+                {isPaymentOpen ? (
                   <>
                     <div className="mr-2 h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
                     Procesando...
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="mr-2" /> 
-                    Proceder al pago
+                    <BadgeDollarSign size={16} className="mr-2" /> 
+                    Registrar pedido
                   </>
                 )}
               </button>
             </div>
           </div>
         </>
+      )}
+      
+      {/* Formulario de pago */}
+      {isPaymentOpen && (
+        <PaymentForm 
+          isOpen={isPaymentOpen}
+          onClose={() => setIsPaymentOpen(false)}
+          onSubmit={handlePaymentSuccess}
+          orderTotal={total}
+        />
       )}
     </div>
   );

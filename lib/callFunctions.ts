@@ -1,7 +1,7 @@
 'use client';
 import { UltravoxSession, UltravoxSessionStatus, Transcript, UltravoxExperimentalMessageEvent, Role } from 'ultravox-client';
 import { JoinUrlResponse, CallConfig, OrderDetailsData, OrderItem } from '@/lib/types';
-import { updateOrderTool, highlightProductTool } from '@/lib/clientTools';
+import { updateOrderTool, highlightProductTool, processPaymentTool } from '@/lib/clientTools';
 
 // Definición del tipo para eventos de invocación de agente
 interface CustomEvent extends Event {
@@ -94,6 +94,16 @@ export function handleToolInvocation(event: CustomEvent) {
         }
         break;
         
+      case 'processPayment':
+        try {
+          console.log("[handleToolInvocation] Ejecutando processPaymentTool");
+          const result = processPaymentTool(parameters);
+          console.log("[handleToolInvocation] Resultado de processPaymentTool:", result);
+        } catch (error) {
+          console.error("[handleToolInvocation] Error al procesar el pago:", error);
+        }
+        break;
+        
       default:
         console.warn(`[handleToolInvocation] Herramienta desconocida: ${tool}`);
     }
@@ -176,6 +186,10 @@ export async function startCall(callbacks: CallCallbacks, callConfig: CallConfig
       console.log("[startCall] Registrando herramienta highlightProduct...");
       uvSession.registerToolImplementation("highlightProduct", highlightProductTool);
       console.log("[startCall] Herramienta highlightProduct registrada exitosamente");
+      
+      console.log("[startCall] Registrando herramienta processPayment...");
+      uvSession.registerToolImplementation("processPayment", processPaymentTool);
+      console.log("[startCall] Herramienta processPayment registrada exitosamente");
     } catch (toolError) {
       console.error("[startCall] Error al registrar herramientas:", toolError);
       throw new Error("Error al registrar herramientas: " + (toolError instanceof Error ? toolError.message : String(toolError)));
@@ -299,5 +313,22 @@ export function handleOrderUpdate(orderData: any) {
     }
   } catch (error) {
     console.error("Error al manejar la actualización del pedido:", error);
+  }
+}
+
+/**
+ * Registra la implementación de herramientas para el asistente de voz.
+ * @param toolRegistry El registro de herramientas que proporcionará Ultravox.
+ */
+export function registerToolImplementation(toolRegistry: any) {
+  try {
+    // Registrar herramienta para actualizar pedidos
+    toolRegistry.registerToolImplementation("updateOrder", updateOrderTool);
+    // Registrar herramienta para resaltar productos
+    toolRegistry.registerToolImplementation("highlightProduct", highlightProductTool);
+    // Registrar herramienta para procesar pagos
+    toolRegistry.registerToolImplementation("processPayment", processPaymentTool);
+  } catch (error) {
+    console.error("Error al registrar las implementaciones de herramientas:", error);
   }
 }
