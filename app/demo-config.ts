@@ -33,13 +33,11 @@ function getSystemPrompt() {
 
     # EXTRAS
     GUACAMOLE $35.00
-    QUESADILLA $30.00
     QUESO EXTRA $15.00
     ORDEN DE CEBOLLITAS $25.00
 
   ## Flujo de Conversación
   1. Saludo -> Toma de Pedido -> Llamada "updateOrder" -> Confirmación -> Información de Pago
-  2. Mencionar que también pueden usar el menú visual: "También puedes seleccionar directamente desde nuestro menú visual"
 
   ## REGLAS CRUCIALES PARA EL USO DE HERRAMIENTAS
   - *OBLIGATORIO*: SIEMPRE DEBES llamar a la herramienta "updateOrder" INMEDIATAMENTE cuando ocurra cualquiera de estas situaciones:

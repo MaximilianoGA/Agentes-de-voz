@@ -48,6 +48,28 @@ Actualmente, la aplicación cuenta con las siguientes funcionalidades:
    - Carga inicial de sonidos puede causar demoras
    - Posibles problemas de rendimiento en dispositivos de gama baja
 
+## Problemas Actuales Detallados (Junio 2024)
+
+1. **Problemas UI/UX críticos**:
+   - **Contenedor de detalles del pedido**: El tamaño del contenedor no se ajusta correctamente en ciertos dispositivos, causando que parte del contenido quede fuera de vista o se corte, especialmente cuando hay múltiples productos en el carrito.
+   - **Visualización de productos**: Los productos en el carrito a veces no muestran correctamente sus íconos representativos, usando íconos genéricos en su lugar.
+   - **Campo de instrucciones especiales**: No se muestra correctamente en todos los dispositivos, dificultando la entrada de instrucciones específicas para cada producto.
+
+2. **Problemas de funcionalidad de voz**:
+   - **Resaltado de productos**: La función `highlightProductTool` no está funcionando correctamente para todos los productos. Específicamente, cuando el asistente menciona "Taco al Pastor", el producto no siempre se resalta visualmente en la interfaz.
+   - **Entrada de datos por voz**: Los usuarios no pueden ingresar datos de contacto mediante voz de manera efectiva. La integración entre la herramienta `paymentInputTool` y el componente `OrderDetails` presenta fallos en el procesamiento de eventos.
+   - **Feedback visual insuficiente**: Cuando los datos se ingresan por voz, falta retroalimentación visual clara que indique al usuario que sus datos han sido capturados correctamente.
+
+3. **Problemas de integración**:
+   - **Integración de herramientas de cliente**: Existen duplicaciones y posibles conflictos entre las implementaciones en `app/lib/clientTools.ts` y `app/lib/utils/clientTools.ts`, lo que causa comportamientos inconsistentes.
+   - **Manejo de eventos de voz**: Los eventos personalizados (`voicePaymentInput`, `processPayment`, etc.) no siempre son capturados correctamente por los componentes correspondientes.
+   - **Estado de formulario incompleto**: El sistema no valida correctamente cuándo todos los campos del formulario de contacto están completos, lo que puede llevar a envíos prematuros o bloqueos en el botón "Registrar Pedido".
+
+4. **Errores técnicos**:
+   - **Referencias a tipos inexistentes**: Algunos componentes hacen referencia a tipos que no están correctamente exportados o importados, causando errores de compilación.
+   - **Inconsistencia en la estructura de datos**: La estructura de `OrderItem` varía entre componentes, causando problemas al transmitir información entre ellos.
+   - **Manejo inadecuado de promesas**: Algunas funciones asíncronas no gestionan correctamente las promesas, lo que puede resultar en comportamientos impredecibles.
+
 ## Fases del Proyecto
 
 ### Fase 1: Desarrollo Inicial (Completada)
@@ -126,6 +148,28 @@ Actualmente, la aplicación cuenta con las siguientes funcionalidades:
    - Reconocimiento de voz en diferentes dialectos
    - Localización completa de la aplicación
 
+## Plan de Acción Inmediato (Junio 2024)
+
+1. **Arreglar la visualización del contenedor de detalles del pedido**:
+   - Revisar y ajustar los estilos CSS responsivos en `OrderDetails.tsx`
+   - Implementar un sistema flexible de alturas máximas basado en el viewport
+   - Garantizar que todos los elementos sean visibles sin necesidad de desplazamiento excesivo
+
+2. **Corregir la funcionalidad de resaltado de productos**:
+   - Consolidar las implementaciones de `highlightProductTool` para evitar duplicaciones
+   - Asegurar que la búsqueda de productos por nombre o ID sea más robusta y tolerante a variaciones
+   - Mejorar el feedback visual cuando un producto es resaltado
+
+3. **Solucionar la entrada de datos por voz**:
+   - Refinar la integración entre `paymentInputTool` y `OrderDetails`
+   - Mejorar la normalización de campos para asegurar que los datos se asignen correctamente
+   - Implementar retroalimentación visual más clara cuando se completan campos por voz
+
+4. **Unificar el manejo de tipos y servicios**:
+   - Consolidar las definiciones de tipos en un solo lugar
+   - Eliminar duplicaciones en servicios cliente y establecer una estructura clara
+   - Mejorar la documentación para facilitar el mantenimiento futuro
+
 ## Cronograma Tentativo
 
 - **Q2 2024**: Completar correcciones visuales y mejoras de usabilidad
@@ -137,3 +181,5 @@ Actualmente, la aplicación cuenta con las siguientes funcionalidades:
 ## Conclusiones
 
 El proyecto "Taquería El Buen Sabor" ha avanzado significativamente en la implementación de una experiencia de usuario moderna que combina interfaces visuales y de voz. Las próximas fases se enfocarán en refinar la experiencia actual, corregir los problemas visuales identificados y expandir las funcionalidades para ofrecer una plataforma más completa y sofisticada para los clientes de la taquería.
+
+Los problemas actuales más urgentes están centrados en la experiencia de usuario, particularmente en la visualización correcta de los detalles del pedido, el resaltado efectivo de productos mencionados por voz, y la capacidad de los usuarios para proporcionar datos de contacto mediante comandos de voz. La resolución de estos problemas es prioritaria para avanzar a las siguientes fases del proyecto.

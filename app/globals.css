@@ -137,6 +137,26 @@
     background-color: #f1f1f1;
     border-radius: 20px;
   }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Animación para campos completados por voz */
+  @keyframes field-completed-pulse {
+    0%, 100% {
+      background-color: var(--tw-bg-opacity, 1) theme('colors.green.50');
+      border-color: var(--tw-border-opacity, 1) theme('colors.green.300');
+    }
+    50% {
+      background-color: var(--tw-bg-opacity, 1) theme('colors.green.100');
+      border-color: var(--tw-border-opacity, 1) theme('colors.green.400');
+    }
+  }
+
+  .field-completed-animation {
+    animation: field-completed-pulse 1.5s ease-in-out;
+  }
 }
 
 /* Animaciones y efectos para el menú de la taquería */

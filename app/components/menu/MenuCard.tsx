@@ -10,6 +10,7 @@ interface MenuCardProps {
   item: MenuItem;
   index: number;
   onAddToCart: (item: MenuItem, quantity: number, specialInstructions?: string) => void;
+  isHighlighted?: boolean;
   ref?: React.Ref<HTMLDivElement>;
 }
 
@@ -30,108 +31,22 @@ declare module '@/app/lib/types' {
  * y añadir al carrito. Incluye animaciones y efectos visuales mejorados.
  */
 const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((props, forwardedRef) => {
-  const { item, index, onAddToCart } = props;
+  const { item, index, onAddToCart, isHighlighted } = props;
   const [quantity, setQuantity] = useState<number>(1);
   const [specialInstructions, setSpecialInstructions] = useState<string>('');
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [isAddingToCart, setIsAddingToCart] = useState<boolean>(false);
-  const [isHighlighted, setIsHighlighted] = useState<boolean>(false);
   const internalRef = useRef<HTMLDivElement>(null);
   
   // Combinamos las refs usando useEffect para evitar asignaciones directas
   useEffect(() => {
     if (!internalRef.current) return;
-    
-    // Si tenemos una ref de referencia, actualizamos la referencia externa
     if (typeof forwardedRef === 'function') {
       forwardedRef(internalRef.current);
     } else if (forwardedRef) {
-      // No intentamos asignar a .current directamente
-      // Esta es una técnica de adaptación de ref, no necesitamos manipular la propidad readonly
+      // (No hacer nada si es un objeto ref)
     }
   }, [forwardedRef]);
-  
-  // Efecto para manejar la animación de resaltado cuando el producto es destacado por el agente
-  useEffect(() => {
-    const handleHighlight = (event: CustomEvent) => {
-      try {
-        const { productId } = event.detail as { productId: string };
-        
-        console.log(`[MenuCard] Evento highlightProduct recibido: ${productId}, item.id: ${item.id}`);
-        
-        // Normalizar ambos IDs para comparación (eliminar espacios, guiones y convertir a minúsculas)
-        const normalizedProductId = productId.toLowerCase().replace(/[-\s]+/g, '');
-        const normalizedItemId = item.id.toLowerCase().replace(/[-\s]+/g, '');
-        
-        // Comprobar también si el nombre del producto está contenido en el ID
-        const itemNameNormalized = item.name.toLowerCase().replace(/[-\s]+/g, '');
-        
-        // Comprobar también por categoría para casos generales (ej: "extras")
-        const categoryMatches = normalizedProductId === item.categoryId?.toLowerCase() || 
-                              normalizedProductId.includes(item.categoryId?.toLowerCase() || '') ||
-                              (item.categoryId?.toLowerCase() || '').includes(normalizedProductId);
-        
-        // Verificar coincidencia por ID exacto o nombre
-        const isMatch = 
-          normalizedProductId === normalizedItemId || 
-          normalizedProductId.includes(normalizedItemId) || 
-          normalizedItemId.includes(normalizedProductId) ||
-          normalizedProductId.includes(itemNameNormalized) ||
-          itemNameNormalized.includes(normalizedProductId) ||
-          categoryMatches;
-        
-        if (isMatch) {
-          console.log(`[MenuCard] ¡Coincidencia encontrada! Resaltando: ${item.name} (${item.categoryId})`);
-          setIsHighlighted(true);
-          
-          // Hacer scroll al elemento con mayor prioridad visual
-          if (internalRef.current) {
-            // Aplicar un efecto más sutil
-            internalRef.current.classList.add('flash-highlight');
-            
-            // Realizar scroll de manera suave con tiempo de espera
-            setTimeout(() => {
-              if (internalRef.current) {
-                internalRef.current.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'center',
-                  inline: 'center'
-                });
-                
-                // Emitir evento para asegurar que la categoría se active correctamente
-                if (item.categoryId) {
-                  const categoryEvent = new CustomEvent('activateCategory', {
-                    detail: { category: item.categoryId }
-                  });
-                  window.dispatchEvent(categoryEvent);
-                }
-              }
-            }, 100);
-            
-            // Quitar el efecto de flash después de un tiempo
-            setTimeout(() => {
-              if (internalRef.current) {
-                internalRef.current.classList.remove('flash-highlight');
-              }
-            }, 1200);
-          }
-          
-          // Mantener el resaltado por un tiempo razonable y luego quitarlo gradualmente
-          setTimeout(() => {
-            setIsHighlighted(false);
-          }, 4000);
-        }
-      } catch (error) {
-        console.error('[MenuCard] Error al procesar evento highlightProduct:', error);
-      }
-    };
-    
-    window.addEventListener('highlightProduct', handleHighlight as EventListener);
-    
-    return () => {
-      window.removeEventListener('highlightProduct', handleHighlight as EventListener);
-    };
-  }, [item.id, item.name, item.categoryId]);
   
   // Formatear precio como moneda
   const formatCurrency = (amount: number) => {
@@ -166,28 +81,11 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
         onAddToCart(item, quantity, specialInstructions || undefined);
       }
       
-      // Animar la adición al carrito
-      if (internalRef.current) {
-        internalRef.current.classList.add('added-to-cart');
-      }
-      
-      // Mostrar animación de checkmark
-      const checkmark = document.createElement('div');
-      checkmark.innerHTML = '<svg viewBox="0 0 24 24" width="30" height="30" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-      checkmark.className = 'fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 rounded-full w-12 h-12 flex items-center justify-center scale-0 opacity-0 animate-checkmark';
-      document.body.appendChild(checkmark);
-      
-      setTimeout(() => {
-        if (document.body.contains(checkmark)) {
-          document.body.removeChild(checkmark);
-        }
-      }, 1500);
-      
       // Resetear después de añadir
       setTimeout(() => {
+        setIsAddingToCart(false);
         setQuantity(1);
         setSpecialInstructions('');
-        setIsAddingToCart(false);
         if (internalRef.current) {
           internalRef.current.classList.remove('added-to-cart');
         }
@@ -291,18 +189,10 @@ const MenuCard = React.forwardRef<HTMLDivElement, Omit<MenuCardProps, 'ref'>>((p
   
   return (
     <div 
-      className={`product-card bg-white rounded-xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-lg transition-all duration-300 ${
-        isHighlighted ? 'highlight-pulse border-amber-400 shadow-amber-300' : ''
-      }`}
+      className={`product-card bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 ${isHighlighted ? 'border-amber-400 ring-2 ring-amber-300 ring-offset-2' : 'border-amber-100'}`}
       ref={internalRef}
       style={{
         opacity: item.available ? '1' : '0.5',
-        /* Estilos sutiles para el resaltado sin animaciones abruptas */
-        ...(isHighlighted ? {
-          boxShadow: '0 0 10px rgba(251, 191, 36, 0.5)',
-          transform: 'scale(1.02)',
-          transition: 'all 0.5s ease-in-out'
-        } : {}),
       }}
       data-product-id={item.id}
     >

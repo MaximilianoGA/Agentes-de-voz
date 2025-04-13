@@ -1,169 +1,271 @@
 import { ClientToolImplementation } from 'ultravox-client';
+import { OrderItem, MenuItem } from './types';
+import { menuItems } from './data/menu-items';
+import { addItemToOrder, getCurrentOrder, clearCurrentOrder, updateItemQuantity } from './services/orderService';
 
-export const updateOrderTool: ClientToolImplementation = (parameters) => {
-  const { ...orderData } = parameters;
+/**
+ * Herramienta para resaltar visualmente un producto en el menú.
+ * Despacha un evento 'highlightProduct' que la UI puede escuchar.
+ */
+export const highlightProductTool: ClientToolImplementation = (params) => {
+  console.log("[highlightProductTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+
+  // Verificar que estamos en un entorno de navegador
+  if (typeof window === 'undefined') {
+    console.warn("[highlightProductTool] No estamos en un entorno de navegador");
+    return "No se puede resaltar el producto en este entorno.";
+  }
+
+  // Extraer parámetros específicos, productId y productName
+  const { productId, productName, ...rest } = params as { productId?: string; productName?: string; [key: string]: any };
+
+  // Verificar que se proporcionó al menos un parámetro válido
+  if (!productId && !productName) {
+    console.warn("[highlightProductTool] Se requiere productId o productName");
+    return 'Se requiere el ID o el nombre del producto para resaltarlo.';
+  }
+
+  // Buscar el producto en el menú
+  // Asegurarse de que menuItems esté correctamente importado y disponible
+  const product = menuItems.find((item: MenuItem) => {
+    if (productId) {
+      // Comparación robusta, considerando posibles diferencias de tipo
+      return String(item.id) === String(productId);
+    } else if (productName) {
+      // Búsqueda insensible a mayúsculas/minúsculas y espacios
+      return item.name.trim().toLowerCase().includes(productName.trim().toLowerCase());
+    }
+    return false;
+  });
+
+  // Si no se encuentra el producto, devolver mensaje de error
+  if (!product) {
+    console.warn(`[highlightProductTool] No se encontró el producto: ${productId || productName}`);
+    return `No se encontró el producto llamado "${productName || productId}".`;
+  }
+
+  // Crear un evento personalizado para resaltar el producto
+  try {
+    const event = new CustomEvent('highlightProduct', {
+      detail: {
+        productId: product.id,
+        name: product.name,
+        categoryId: product.categoryId // Asegúrate de que categoryId exista en tu tipo MenuItem
+      }
+    });
+
+    // Despachar el evento
+    window.dispatchEvent(event);
+    console.log(`[highlightProductTool] Evento highlightProduct despachado para: ${product.name}`);
+
+    // Devolver mensaje de éxito para el agente
+    return `Producto "${product.name}" resaltado correctamente.`;
+
+  } catch (error) {
+    console.error("[highlightProductTool] Error al despachar el evento:", error);
+    return "Ocurrió un error al intentar resaltar el producto.";
+  }
+};
+
+/**
+ * Herramienta para actualizar los detalles del pedido.
+ * Procesa los datos del pedido y utiliza el servicio de pedidos para actualizar el estado.
+ */
+export const updateOrderTool: ClientToolImplementation = (params) => {
+  console.log("[updateOrderTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
   
-  // Validar que estamos en el navegador
-  if (typeof window !== "undefined") {
-    console.log("[updateOrderTool] Dispatching event with order data:", orderData.orderDetailsData);
-    
+  if (typeof window === "undefined") {
+    console.warn("[updateOrderTool] No estamos en un entorno de navegador");
+    return "No se puede actualizar el pedido en este entorno.";
+  }
+  
+  // Implementar un timeout para la operación completa
+  const timeoutPromise = new Promise<string>((resolve) => {
+    setTimeout(() => {
+      resolve("Operación completada con timeout de seguridad");
+    }, 5000); // 5 segundos de timeout de seguridad
+  });
+  
+  const operationPromise = new Promise<string>((resolve) => {
     try {
-      // Asegurarse de que los datos sean un array válido
-      interface OrderItem {
-        name: string;
-        quantity: number;
-        price: number;
-        specialInstructions?: string;
+      console.log("[updateOrderTool] Iniciando procesamiento del pedido");
+      
+      if (!params || typeof params !== 'object') {
+        console.error("[updateOrderTool] Error: Parámetros inválidos:", params);
+        resolve("Error: Parámetros de pedido inválidos");
+        return;
       }
       
-      let orderItems: OrderItem[] = [];
+      // Extraer datos del pedido
+      const { orderData, orderDetailsData, ...rest } = params as any;
       
-      if (Array.isArray(orderData.orderDetailsData)) {
-        // Validar y formatear cada ítem del pedido para garantizar que el precio sea un número
-        orderItems = orderData.orderDetailsData.map(item => {
-          return {
-            name: item.name || "Producto sin nombre",
-            quantity: Number(item.quantity) || 1,
-            price: Number(item.price) || 0,
-            specialInstructions: item.specialInstructions || ""
-          };
-        });
-      } else if (typeof orderData.orderDetailsData === 'string') {
-        try {
-          const parsed = JSON.parse(orderData.orderDetailsData);
-          if (Array.isArray(parsed)) {
-            orderItems = parsed.map(item => {
-              return {
-                name: item.name || "Producto sin nombre",
-                quantity: Number(item.quantity) || 1,
-                price: Number(item.price) || 0,
-                specialInstructions: item.specialInstructions || ""
-              };
-            });
+      // Validar estructura de datos de pedido
+      let orderItems: any[] = [];
+      
+      // Manejar diferentes formatos para orderDetailsData
+      if (orderDetailsData) {
+        if (typeof orderDetailsData === 'string') {
+          try {
+            orderItems = JSON.parse(orderDetailsData);
+          } catch (parseError) {
+            console.error("[updateOrderTool] Error al parsear orderDetailsData como JSON:", parseError);
+            orderItems = [];
           }
-        } catch (e) {
-          console.error("[updateOrderTool] Error parsing order data:", e);
+        } else if (Array.isArray(orderDetailsData)) {
+          orderItems = orderDetailsData;
+        } else {
+          console.warn("[updateOrderTool] orderDetailsData en formato inesperado:", typeof orderDetailsData);
           orderItems = [];
         }
+      } else if (orderData) {
+        // Extraer items del orderData
+        if (Array.isArray(orderData)) {
+          orderItems = orderData;
+        } else if (orderData.items && Array.isArray(orderData.items)) {
+          orderItems = orderData.items;
+        } else if (typeof orderData === 'object') {
+          orderItems = [orderData];
+        } else if (typeof orderData === 'string') {
+          try {
+            const parsedData = JSON.parse(orderData);
+            
+            if (Array.isArray(parsedData)) {
+              orderItems = parsedData;
+            } else if (parsedData.items && Array.isArray(parsedData.items)) {
+              orderItems = parsedData.items;
+            } else {
+              orderItems = [parsedData];
+            }
+          } catch (parseError) {
+            console.error("[updateOrderTool] Error al parsear orderData como JSON:", parseError);
+            orderItems = [];
+          }
+        } else {
+          console.warn("[updateOrderTool] orderData en formato inesperado:", typeof orderData);
+          orderItems = [];
+        }
+      } else {
+        // Buscar ítems en cualquier parámetro que pueda contenerlos
+        for (const key in rest) {
+          const value = rest[key];
+          
+          if (Array.isArray(value)) {
+            orderItems = value;
+            break;
+          } else if (value && typeof value === 'object' && value.items && Array.isArray(value.items)) {
+            orderItems = value.items;
+            break;
+          }
+        }
       }
       
-      // Convertir a JSON string
-      const data = JSON.stringify(orderItems);
+      // Si no hay ítems, retornar error
+      if (orderItems.length === 0) {
+        console.warn("[updateOrderTool] No se encontraron ítems en los parámetros");
+        resolve("No se encontraron ítems en los parámetros");
+        return;
+      }
       
-      // Crear y disparar evento
-      const event = new CustomEvent("orderDetailsUpdated", {
-        detail: data,
-      });
-      window.dispatchEvent(event);
-      
-      // Guardar en localStorage para persistencia
-      localStorage.setItem('currentOrder', data);
-      localStorage.setItem('orderDetails', data); // Guardar también con este nombre para compatibilidad
-      
-      return "Se ha actualizado el pedido correctamente.";
-    } catch (error) {
-      console.error("[updateOrderTool] Error dispatching event:", error);
-      return "Error al actualizar el pedido: " + String(error);
-    }
-  } else {
-    return "No se pudo actualizar el pedido (entorno no compatible).";
-  }
-};
-
-/**
- * Herramienta para resaltar un producto específico del menú
- * Esta herramienta permite al agente de voz resaltar un producto para llamar la atención
- * del usuario sin añadirlo al carrito
- */
-export const highlightProductTool: ClientToolImplementation = (parameters) => {
-  const { productId } = parameters;
-  
-  // Validar que estamos en el navegador
-  if (typeof window !== "undefined") {
-    console.log("[highlightProductTool] Resaltando producto:", productId);
-    
-    try {
-      // Crear y disparar evento de resaltado
-      const event = new CustomEvent("highlightProduct", {
-        detail: { productId },
-      });
-      window.dispatchEvent(event);
-      
-      return `Se ha resaltado el producto "${productId}" correctamente.`;
-    } catch (error) {
-      console.error("[highlightProductTool] Error al resaltar producto:", error);
-      return "Error al resaltar el producto: " + String(error);
-    }
-  } else {
-    return "No se pudo resaltar el producto (entorno no compatible).";
-  }
-};
-
-// Variable para controlar si se está esperando respuesta del usuario
-let isWaitingForUserResponse = false;
-let waitingTimeout: NodeJS.Timeout | null = null;
-
-/**
- * Función que detecta silencio y ejecuta una acción después del tiempo especificado
- * @param seconds Tiempo en segundos para esperar antes de proceder
- * @param callback Función a ejecutar después del tiempo de espera
- */
-const waitForUserResponse = (seconds: number, callback: () => void) => {
-  // Si ya estamos esperando, cancelamos el timeout anterior
-  if (waitingTimeout) {
-    clearTimeout(waitingTimeout);
-  }
-  
-  isWaitingForUserResponse = true;
-  console.log(`[waitForUserResponse] Esperando respuesta del usuario por ${seconds} segundos...`);
-  
-  // Notificar al UI que estamos esperando
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("waitingForUserResponse", {
-      detail: { seconds }
-    }));
-  }
-  
-  // Configurar temporizador
-  waitingTimeout = setTimeout(() => {
-    isWaitingForUserResponse = false;
-    console.log("[waitForUserResponse] Tiempo de espera finalizado, procediendo...");
-    callback();
-  }, seconds * 1000);
-  
-  return "Esperando respuesta del usuario...";
-};
-
-/**
- * Herramienta para iniciar el registro del pedido actual
- * Esta herramienta permite al asistente de voz iniciar el proceso de registro
- * cuando el usuario lo solicita verbalmente
- */
-export const processPaymentTool: ClientToolImplementation = (parameters) => {
-  // Validar que estamos en el navegador
-  if (typeof window !== "undefined") {
-    console.log("[processPaymentTool] Iniciando registro del pedido");
-    
-    try {
-      // Implementar espera de 3 segundos para la confirmación del usuario
-      return waitForUserResponse(3, () => {
-        // Solo proceder si no se canceló durante la espera
-        if (!isWaitingForUserResponse) {
-          // Crear y disparar evento para mostrar el formulario de registro
-          const event = new CustomEvent("processPayment", {
-            detail: { timestamp: new Date().toISOString() }
-          });
-          window.dispatchEvent(event);
-          
-          console.log("[processPaymentTool] Registro iniciado después de espera de confirmación");
+      // Procesar cada ítem y actualizar el pedido usando el servicio
+      try {
+        // Limpiar el pedido actual si se especifica
+        const shouldClear = rest.clearOrder === true || rest.clear === true;
+        if (shouldClear) {
+          clearCurrentOrder();
         }
-      });
+        
+        // Obtener el pedido actual o crear uno nuevo
+        const currentOrder = getCurrentOrder();
+        
+        // Procesar cada ítem
+        for (const item of orderItems) {
+          const id = item.id || getItemIdFromName(item.name);
+          const quantity = typeof item.quantity === 'number' ? Math.max(1, Math.min(10, item.quantity)) : 1;
+          const specialInstructions = typeof item.specialInstructions === 'string' ? item.specialInstructions : undefined;
+          
+          // Actualizar ítem en el pedido
+          addItemToOrder(id, quantity, specialInstructions);
+        }
+        
+        // Obtener el pedido actualizado
+        const updatedOrder = getCurrentOrder();
+        
+        console.log("[updateOrderTool] Pedido actualizado correctamente:", updatedOrder);
+        resolve(`Pedido actualizado. Total: ${updatedOrder?.totalAmount || 0} MXN`);
+      } catch (error) {
+        console.error("[updateOrderTool] Error al actualizar el pedido:", error);
+        resolve(`Error al actualizar el pedido: ${error}`);
+      }
     } catch (error) {
-      console.error("[processPaymentTool] Error al iniciar registro:", error);
-      return "Error al iniciar el registro: " + String(error);
+      console.error("[updateOrderTool] Error crítico durante el procesamiento:", error);
+      resolve("Error crítico al procesar los detalles del pedido.");
     }
-  } else {
-    return "No se pudo iniciar el registro (entorno no compatible).";
+  });
+  
+  // Devolver la primera promesa que se resuelva (operación o timeout)
+  return Promise.race([operationPromise, timeoutPromise]);
+};
+
+/**
+ * Función auxiliar para obtener el ID de un producto a partir de su nombre
+ */
+function getItemIdFromName(name: string): string {
+  if (!name) return 'unknown-product';
+  
+  const nameLower = name.toLowerCase();
+  
+  // Buscar en el catálogo
+  const catalogItem = menuItems.find(item => 
+    item.name.toLowerCase() === nameLower
+  );
+  
+  if (catalogItem) {
+    return catalogItem.id;
+  }
+  
+  // Si no se encuentra, generar un ID basado en el nombre
+  return 'product-' + nameLower
+    .replace(/\s+/g, '-')       // Reemplazar espacios con guiones
+    .replace(/[^a-z0-9-]/g, '') // Eliminar caracteres especiales
+    .replace(/-+/g, '-');       // Evitar guiones múltiples
+}
+
+/**
+ * Herramienta para procesar el pago del pedido actual.
+ * Envía un evento personalizado que será capturado por el componente OrderDetails.
+ */
+export const processPaymentTool: ClientToolImplementation = (params) => {
+  console.log("[processPaymentTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[processPaymentTool] No estamos en un entorno de navegador");
+    return "No se puede procesar el pago en este entorno.";
+  }
+  
+  // Verificar si hay un pedido actual
+  const currentOrder = getCurrentOrder();
+  if (!currentOrder || currentOrder.items.length === 0) {
+    console.warn("[processPaymentTool] No hay pedido activo o está vacío");
+    return "No hay pedido activo para procesar el pago.";
+  }
+  
+  try {
+    // Crear y disparar el evento de procesamiento de pago
+    const event = new CustomEvent("processPayment", {
+      detail: { 
+        timestamp: new Date().toISOString(),
+        orderId: currentOrder.id,
+        totalAmount: currentOrder.totalAmount
+      }
+    });
+    
+    window.dispatchEvent(event);
+    console.log("[processPaymentTool] Evento processPayment despachado correctamente");
+    
+    return `Procesamiento de pago iniciado para el pedido #${currentOrder.id}. Total: ${currentOrder.totalAmount} MXN`;
+  } catch (error) {
+    console.error("[processPaymentTool] Error al procesar el pago:", error);
+    return "Error al procesar el pago del pedido.";
   }
 };
 
@@ -172,41 +274,59 @@ export const processPaymentTool: ClientToolImplementation = (parameters) => {
  * Esta herramienta permite al asistente de voz enviar datos para rellenar
  * el formulario de contacto cuando el usuario los dicta verbalmente
  */
-export const paymentInputTool: ClientToolImplementation = (parameters) => {
-  // Validar que estamos en el navegador
-  if (typeof window !== "undefined") {
-    console.log("[paymentInputTool] Recibiendo datos de contacto por voz:", parameters);
+export const paymentInputTool: ClientToolImplementation = (params) => {
+  console.log("[paymentInputTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[paymentInputTool] No estamos en un entorno de navegador");
+    return "No se puede procesar datos de entrada en este entorno.";
+  }
+
+  try {
+    // Extraer información de los parámetros
+    const { field, value } = params as any;
     
-    try {
-      // Extraer datos
-      const { field, value } = parameters;
-      
-      if (!field || !value) {
-        return "Se requiere especificar campo (field) y valor (value).";
-      }
-      
-      // Cancelar cualquier espera activa
-      if (isWaitingForUserResponse && waitingTimeout) {
-        clearTimeout(waitingTimeout);
-        isWaitingForUserResponse = false;
-      }
-      
-      // Crear y disparar evento para el formulario de contacto
-      const event = new CustomEvent("voiceCommand", {
-        detail: { 
-          command: 'paymentInput',
-          data: { field, value }
-        }
-      });
-      window.dispatchEvent(event);
-      
-      return `Datos de contacto "${field}" recibidos correctamente: "${value}".`;
-    } catch (error) {
-      console.error("[paymentInputTool] Error al procesar datos de contacto:", error);
-      return "Error al procesar los datos de contacto: " + String(error);
+    if (!field) {
+      console.warn("[paymentInputTool] No se especificó campo");
+      return "Se requiere especificar un campo (name, email, phone)";
     }
-  } else {
-    return "No se pueden procesar datos de contacto (entorno no compatible).";
+
+    // Normalizar el campo para asegurar consistencia
+    let normalizedField = field.toLowerCase().trim();
+    
+    // Mapear campos en español a su versión interna si es necesario
+    if (normalizedField === 'nombre' || normalizedField === 'clientname') normalizedField = 'name';
+    if (normalizedField === 'correo' || normalizedField === 'email') normalizedField = 'email';
+    if (normalizedField === 'teléfono' || normalizedField === 'telefono') normalizedField = 'phone';
+    
+    // Validar que el campo sea válido
+    if (!['name', 'email', 'phone'].includes(normalizedField)) {
+      console.warn(`[paymentInputTool] Campo no reconocido: ${field}`);
+      return `Campo no reconocido: ${field}. Campos válidos: name, email, phone`;
+    }
+
+    // Si se proporciona un valor, procesarlo
+    if (value) {
+      // Crear evento personalizado para procesar la entrada de datos
+      const event = new CustomEvent('voicePaymentInput', { 
+        detail: { 
+          field: normalizedField,
+          value 
+        } 
+      });
+      
+      // Disparar el evento para que los componentes lo escuchen
+      window.dispatchEvent(event);
+      console.log(`[paymentInputTool] Evento voicePaymentInput despachado para campo ${normalizedField}`);
+      
+      return `Datos de ${normalizedField} ("${value}") recibidos y procesados`;
+    } else {
+      console.warn("[paymentInputTool] No se proporcionó valor para el campo");
+      return `Se requiere proporcionar un valor para el campo ${normalizedField}`;
+    }
+  } catch (error) {
+    console.error("[paymentInputTool] Error al procesar datos de pago:", error);
+    return "Error al procesar datos de pago.";
   }
 };
 
@@ -215,33 +335,39 @@ export const paymentInputTool: ClientToolImplementation = (parameters) => {
  * Esta herramienta permite al asistente de voz indicar que el usuario
  * quiere finalizar el registro con los datos ya ingresados
  */
-export const completePaymentTool: ClientToolImplementation = (parameters) => {
-  // Validar que estamos en el navegador
-  if (typeof window !== "undefined") {
-    console.log("[completePaymentTool] Completando registro de pedido");
+export const completePaymentTool: ClientToolImplementation = (params) => {
+  console.log("[completePaymentTool] Llamada recibida con parámetros:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[completePaymentTool] No estamos en un entorno de navegador");
+    return "No se puede completar el pago en este entorno.";
+  }
+
+  // Verificar si hay un pedido actual
+  const currentOrder = getCurrentOrder();
+  if (!currentOrder || currentOrder.items.length === 0) {
+    console.warn("[completePaymentTool] No hay pedido activo o está vacío");
+    return "No hay pedido activo para completar.";
+  }
+  
+  try {
+    // Crear evento personalizado para completar el pago
+    const event = new CustomEvent('paymentCompleted', { 
+      detail: { 
+        success: true,
+        orderId: currentOrder.id,
+        timestamp: new Date().toISOString(),
+        totalAmount: currentOrder.totalAmount
+      } 
+    });
     
-    try {
-      // Implementar espera de 3 segundos para la confirmación final
-      return waitForUserResponse(3, () => {
-        // Solo proceder si no se canceló durante la espera
-        if (!isWaitingForUserResponse) {
-          // Crear y disparar evento para completar el registro
-          const event = new CustomEvent("voiceCommand", {
-            detail: { 
-              command: 'completePayment',
-              data: {} 
-            }
-          });
-          window.dispatchEvent(event);
-          
-          console.log("[completePaymentTool] Registro completado después de espera de confirmación");
-        }
-      });
-    } catch (error) {
-      console.error("[completePaymentTool] Error al completar registro:", error);
-      return "Error al completar el registro: " + String(error);
-    }
-  } else {
-    return "No se puede completar el registro (entorno no compatible).";
+    // Disparar el evento para que los componentes lo escuchen
+    window.dispatchEvent(event);
+    console.log("[completePaymentTool] Evento paymentCompleted despachado correctamente");
+    
+    return `Pedido #${currentOrder.id} registrado con éxito. Total: ${currentOrder.totalAmount} MXN`;
+  } catch (error) {
+    console.error("[completePaymentTool] Error al completar el registro:", error);
+    return "Error al completar el registro del pedido.";
   }
 }; 

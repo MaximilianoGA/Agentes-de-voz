@@ -1,485 +1,396 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CreditCard, Check, User, Phone, AtSign, X, AlertCircle, Clock, Printer, Receipt } from 'lucide-react';
+import { CreditCard, Check, User, Phone, AtSign, X, AlertCircle, Clock, Printer, Receipt, CheckCircle, BadgeCheck } from 'lucide-react';
+import { getCurrentOrder } from '../lib/services/orderService';
+
+interface ContactData {
+  name: string;
+  phone: string;
+  email: string;
+}
 
 interface PaymentFormProps {
-  isOpen: boolean;
   onClose: () => void;
-  onSubmit: (paymentData: PaymentFormData) => void;
-  orderTotal: number;
+  onPaymentComplete?: (data: any) => void;
 }
 
-export interface PaymentFormData {
-  clientName: string;
-  email: string;
-  phone: string;
-}
-
-const PaymentForm: React.FC<PaymentFormProps> = ({ isOpen, onClose, onSubmit, orderTotal }) => {
-  const [formData, setFormData] = useState<PaymentFormData>({
-    clientName: '',
-    email: '',
-    phone: ''
+export default function PaymentForm({ onClose, onPaymentComplete }: PaymentFormProps) {
+  const [contactData, setContactData] = useState<ContactData>({
+    name: '',
+    phone: '',
+    email: ''
   });
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [activeField, setActiveField] = useState<keyof PaymentFormData | null>(null);
-  const [isFormComplete, setIsFormComplete] = useState(false);
-  const [waitingForConfirmation, setWaitingForConfirmation] = useState(false);
+  const [completedFields, setCompletedFields] = useState<Set<string>>(new Set());
   const [waitingForUserResponse, setWaitingForUserResponse] = useState(false);
   const [waitingSeconds, setWaitingSeconds] = useState(0);
-  const [showReceiptOption, setShowReceiptOption] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const waitingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [activePaymentMethod, setActivePaymentMethod] = useState<string>('efectivo');
+  const [orderDetails, setOrderDetails] = useState<any>(null);
 
+  const formRef = useRef<HTMLDivElement>(null);
+  const waitingTimerRef = useRef<number | null>(null);
+
+  // Cargar los datos del pedido actual
   useEffect(() => {
-    const requiredFields: (keyof PaymentFormData)[] = ['clientName', 'phone'];
-    const isComplete = requiredFields.every(field => !!formData[field].trim());
-    
-    setIsFormComplete(isComplete);
-    
-    if (isComplete && formError) {
-      setFormError(null);
+    const currentOrder = getCurrentOrder();
+    if (currentOrder) {
+      setOrderDetails({
+        items: currentOrder.items,
+        total: currentOrder.totalAmount,
+        orderId: currentOrder.id
+      });
     }
 
-    if (waitingForConfirmation) {
-      setWaitingForConfirmation(false);
+    // Intentar cargar datos de contacto previamente guardados
+    const savedContactData = localStorage.getItem('lastContactData');
+    if (savedContactData) {
+      try {
+        const parsedData = JSON.parse(savedContactData);
+        setContactData(parsedData);
+        
+        // Marcar campos como completados si tienen valores
+        const completed = new Set<string>();
+        if (parsedData.name) completed.add('name');
+        if (parsedData.phone) completed.add('phone');
+        if (parsedData.email) completed.add('email');
+        setCompletedFields(completed);
+      } catch (e) {
+        console.error('Error al cargar datos de contacto guardados:', e);
+      }
     }
-  }, [formData, formError, waitingForConfirmation]);
+  }, []);
 
+  // Manejar eventos de entrada de datos por voz
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node) && !isProcessing) {
-        onClose();
+    const handleVoicePaymentInput = (event: CustomEvent) => {
+      const { field, value } = event.detail || {};
+      
+      if (field && value && typeof value === 'string') {
+        // Actualizar los datos de contacto
+        setContactData(prevData => ({
+          ...prevData,
+          [field]: value
+        }));
+        
+        // Marcar el campo como completado
+        setCompletedFields(prev => {
+          const newSet = new Set(prev);
+          newSet.add(field);
+          return newSet;
+        });
+        
+        // Animación de feedback
+        const fieldElement = document.getElementById(`payment-${field}`);
+        if (fieldElement) {
+          fieldElement.classList.add('field-completed-animation');
+          setTimeout(() => {
+            fieldElement.classList.remove('field-completed-animation');
+          }, 1000);
+        }
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose, isProcessing]);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    
-    if (waitingForUserResponse && waitingSeconds > 0) {
-      timer = setInterval(() => {
-        setWaitingSeconds(prev => prev - 1);
-      }, 1000);
-    } else if (waitingSeconds === 0 && waitingForUserResponse) {
-      setWaitingForUserResponse(false);
-    }
-
-    // Función para manejar el evento de espera por respuesta
-    const handleWaitingForResponse = () => {
-      console.log('Esperando respuesta del usuario...');
+    // Escuchar el evento de espera para respuesta de usuario
+    const handleWaitingForUserResponse = () => {
       setWaitingForUserResponse(true);
-      setWaitingSeconds(3); // Iniciar temporizador de 3 segundos
-    };
-
-    // Función para manejar cuando el usuario comienza a hablar
-    const handleUserStartedTalking = () => {
-      console.log('Usuario comenzó a hablar');
-      setWaitingForUserResponse(false);
       setWaitingSeconds(0);
+      
+      // Iniciar temporizador para mostrar segundos de espera
+      if (waitingTimerRef.current) {
+        window.clearInterval(waitingTimerRef.current);
+      }
+      
+      waitingTimerRef.current = window.setInterval(() => {
+        setWaitingSeconds(prev => prev + 1);
+      }, 1000);
     };
 
-    window.addEventListener('waitingForUserResponse', handleWaitingForResponse);
+    // Escuchar el evento de usuario comenzó a hablar
+    const handleUserStartedTalking = () => {
+      setWaitingForUserResponse(false);
+      
+      // Detener temporizador
+      if (waitingTimerRef.current) {
+        window.clearInterval(waitingTimerRef.current);
+        waitingTimerRef.current = null;
+      }
+    };
+
+    // Agregar event listeners
+    window.addEventListener('voicePaymentInput', handleVoicePaymentInput as EventListener);
+    window.addEventListener('waitingForUserResponse', handleWaitingForUserResponse);
     window.addEventListener('userStartedTalking', handleUserStartedTalking);
 
+    // Limpiar event listeners
     return () => {
-      if (timer) clearInterval(timer);
-      window.removeEventListener('waitingForUserResponse', handleWaitingForResponse);
+      window.removeEventListener('voicePaymentInput', handleVoicePaymentInput as EventListener);
+      window.removeEventListener('waitingForUserResponse', handleWaitingForUserResponse);
       window.removeEventListener('userStartedTalking', handleUserStartedTalking);
-    };
-  }, [waitingForUserResponse, waitingSeconds]);
-
-  useEffect(() => {
-    const handleVoiceInput = (event: CustomEvent) => {
-      const { field, value } = event.detail;
       
-      if (field && typeof field === 'string' && value && typeof value === 'string') {
-        setWaitingForUserResponse(false);
-        if (waitingIntervalRef.current) {
-          clearInterval(waitingIntervalRef.current);
-          waitingIntervalRef.current = null;
-        }
-        
-        // Mapeo de campos de voz a campos del formulario
-        const fieldMapping: Record<string, keyof PaymentFormData> = {
-          'cardHolder': 'clientName',
-          'titular': 'clientName',
-          'nombre': 'clientName',
-          'email': 'email',
-          'correo': 'email',
-          'teléfono': 'phone',
-          'phone': 'phone'
-        };
-        
-        const mappedField = fieldMapping[field.toLowerCase()] || field;
-        
-        if (mappedField in formData) {
-          setFormData(prev => ({
-            ...prev,
-            [mappedField]: value
-          }));
-          
-          setActiveField(mappedField as keyof PaymentFormData);
-          
-          setTimeout(() => {
-            setActiveField(null);
-          }, 1500);
-        }
-      }
-    };
-
-    window.addEventListener('voicePaymentInput', handleVoiceInput as EventListener);
-    
-    return () => {
-      window.removeEventListener('voicePaymentInput', handleVoiceInput as EventListener);
-    };
-  }, [formData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (waitingForUserResponse) {
-      setWaitingForUserResponse(false);
-      if (waitingIntervalRef.current) {
-        clearInterval(waitingIntervalRef.current);
-        waitingIntervalRef.current = null;
-      }
-    }
-    
-    const { name, value } = e.target;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.clientName.trim()) {
-      setFormError('El nombre es obligatorio');
-      return false;
-    }
-    
-    if (!formData.phone.trim()) {
-      setFormError('El número de teléfono es obligatorio');
-      return false;
-    }
-    
-    setFormError(null);
-    return true;
-  };
-
-  const prepareForConfirmation = () => {
-    if (!validateForm()) {
-      return;
-    }
-    
-    setWaitingForConfirmation(true);
-    
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent('paymentReadyForConfirmation'));
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (waitingForUserResponse) {
-      setWaitingForUserResponse(false);
-      if (waitingIntervalRef.current) {
-        clearInterval(waitingIntervalRef.current);
-      }
-    }
-    
-    if (waitingForConfirmation) {
-      confirmPayment();
-    } else {
-      prepareForConfirmation();
-    }
-  };
-
-  const confirmPayment = () => {
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      onSubmit(formData);
-      setIsProcessing(false);
-      setWaitingForConfirmation(false);
-      setShowReceiptOption(true);
-    }, 2000);
-  };
-
-  const handleVoicePaymentProcess = () => {
-    setWaitingForUserResponse(false);
-    if (waitingIntervalRef.current) {
-      clearInterval(waitingIntervalRef.current);
-    }
-    
-    if (isFormComplete) {
-      if (waitingForConfirmation) {
-        confirmPayment();
-      } else {
-        prepareForConfirmation();
-      }
-    } else {
-      setFormError('Por favor completa todos los campos obligatorios antes de confirmar el pedido');
-    }
-  };
-
-  const printReceipt = () => {
-    // Simulación de impresión
-    console.log("Imprimiendo recibo...");
-    alert("Recibo enviado a la impresora");
-  };
-
-  useEffect(() => {
-    const handleVoicePaymentProcess = () => {
-      if (isOpen) {
-        if (isFormComplete) {
-          handleVoicePaymentProcess();
-        } else {
-          setFormError('Por favor completa todos los campos obligatorios antes de confirmar el pedido');
-        }
-      }
-    };
-
-    window.addEventListener('voicePaymentProcess', handleVoicePaymentProcess);
-    
-    return () => {
-      window.removeEventListener('voicePaymentProcess', handleVoicePaymentProcess);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [isOpen, isFormComplete]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (waitingIntervalRef.current) {
-        clearInterval(waitingIntervalRef.current);
+      // Limpiar temporizador
+      if (waitingTimerRef.current) {
+        window.clearInterval(waitingTimerRef.current);
       }
     };
   }, []);
 
-  if (!isOpen) return null;
+  // Manejar cambio de campos manualmente
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    setContactData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Marcar o desmarcar como completado
+    setCompletedFields(prev => {
+      const newSet = new Set(prev);
+      if (value.trim() !== '') {
+        newSet.add(name);
+      } else {
+        newSet.delete(name);
+      }
+      return newSet;
+    });
+  };
+
+  // Validar el formulario
+  const validateForm = (): boolean => {
+    return completedFields.has('name') && 
+           completedFields.has('phone') && 
+           completedFields.has('email');
+  };
+
+  // Procesar el pago
+  const handleSubmitPayment = () => {
+    if (!validateForm()) {
+      // Resaltar campos incompletos
+      const form = formRef.current;
+      if (form) {
+        form.classList.add('validate-form');
+        setTimeout(() => {
+          form.classList.remove('validate-form');
+        }, 1000);
+      }
+      return;
+    }
+    
+    setPaymentProcessing(true);
+    
+    // Simular procesamiento de pago
+    setTimeout(() => {
+      setPaymentProcessing(false);
+      setPaymentSuccess(true);
+      
+      // Guardar datos de contacto para futuras compras
+      localStorage.setItem('lastContactData', JSON.stringify(contactData));
+      
+      // Llamar al callback con los datos del pago completado
+      if (onPaymentComplete) {
+        onPaymentComplete({
+          success: true,
+          timestamp: new Date().toISOString(),
+          orderId: orderDetails?.orderId || `ORD-${Date.now().toString().slice(-6)}`,
+          contactData: contactData,
+          items: orderDetails?.items || [],
+          total: orderDetails?.total || 0,
+          paymentMethod: activePaymentMethod
+        });
+      }
+      
+      // Cerrar el formulario después de mostrar éxito
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    }, 1500);
+  };
+
+  // Obtener la clase de un campo basado en si está completado
+  const getFieldClass = (fieldName: string): string => {
+    return completedFields.has(fieldName) 
+      ? 'border-green-500 bg-green-50' 
+      : 'border-gray-300 focus:border-amber-500';
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog" aria-labelledby="payment-form-title">
-      <div 
-        ref={modalRef}
-        className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden relative animate-fade-in"
-      >
-        {/* Indicador de espera por respuesta del usuario */}
-        {waitingForUserResponse && (
-          <div className="absolute top-0 inset-x-0 bg-blue-500 text-white p-2 flex items-center justify-center z-20">
-            <Clock size={18} className="animate-pulse mr-2" />
-            <span>
-              Esperando respuesta... {waitingSeconds > 0 ? `(${waitingSeconds}s)` : ''}
-            </span>
+    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 relative overflow-hidden" ref={formRef}>
+      {/* Cabecera */}
+      <div className="bg-amber-600 text-white p-4 flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Finalizar Pedido</h2>
+        <button 
+          onClick={onClose}
+          className="text-white hover:text-amber-200 transition-colors"
+          aria-label="Cerrar"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
+      
+      {/* Contenido */}
+      <div className="p-5">
+        {paymentSuccess ? (
+          <div className="text-center py-8">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <BadgeCheck className="h-10 w-10 text-green-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-green-600 mb-2">¡Pago Completado!</h3>
+            <p className="text-gray-600">Tu pedido ha sido registrado exitosamente.</p>
           </div>
-        )}
-        
-        {/* Encabezado */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-500 p-5 text-white">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Datos de Contacto</h2>
-            <button 
-              onClick={onClose}
-              className="text-white hover:text-amber-200 transition-colors"
-              disabled={isProcessing}
-            >
-              <X size={24} />
-            </button>
-          </div>
-          <p className="text-amber-100 mt-1">Total a pagar: ${orderTotal.toFixed(2)} MXN</p>
-        </div>
-        
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="p-6">
-          {formError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm flex items-start">
-              <AlertCircle size={16} className="mt-0.5 mr-2 flex-shrink-0" />
-              <span>{formError}</span>
-            </div>
-          )}
-          
-          {/* Mensaje de confirmación */}
-          {waitingForConfirmation && (
-            <div className="bg-amber-50 text-amber-700 p-3 rounded-md mb-4 text-sm">
-              <p className="font-medium">Por favor confirma los datos para registrar tu pedido:</p>
-              <ul className="mt-2 space-y-1">
-                <li><span className="font-semibold">Nombre:</span> {formData.clientName}</li>
-                {formData.email && <li><span className="font-semibold">Correo:</span> {formData.email}</li>}
-                <li><span className="font-semibold">Teléfono:</span> {formData.phone}</li>
-              </ul>
-            </div>
-          )}
-          
-          {/* Opciones de impresión de recibo */}
-          {showReceiptOption && (
-            <div className="bg-green-50 text-green-700 p-4 rounded-md mb-4 text-sm">
-              <div className="flex items-center mb-2">
-                <Check size={18} className="mr-2 text-green-600" />
-                <p className="font-medium">¡Pedido registrado correctamente!</p>
-              </div>
-              <p className="mb-3">Por favor, pasa a caja para realizar el pago correspondiente.</p>
-              <button 
-                type="button"
-                onClick={printReceipt}
-                className="w-full flex items-center justify-center bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors"
-              >
-                <Printer size={16} className="mr-2" />
-                Imprimir Recibo
-              </button>
-            </div>
-          )}
-          
-          {/* Datos de contacto */}
-          {!showReceiptOption && (
+        ) : (
+          <>
             <div className="mb-6">
-              <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
-                <User size={18} className="mr-2 text-amber-600" />
-                Información de Contacto
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Información de Contacto</h3>
               
               <div className="space-y-4">
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre completo <span className="text-red-500">*</span>
+                <div>
+                  <label htmlFor="payment-name" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    Nombre completo
+                    {completedFields.has('name') && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Completado
+                      </span>
+                    )}
                   </label>
-                  <div className={`relative ${activeField === 'clientName' ? 'ring-2 ring-amber-500' : ''}`}>
-                    <User size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
                     <input
                       type="text"
-                      name="clientName"
-                      value={formData.clientName}
-                      onChange={handleChange}
-                      className="pl-10 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-800"
-                      placeholder="Nombre completo"
-                      disabled={isProcessing || waitingForConfirmation}
+                      id="payment-name"
+                      name="name"
+                      value={contactData.name}
+                      onChange={handleInputChange}
+                      className={`pl-10 p-2 w-full rounded-md shadow-sm transition-colors ${getFieldClass('name')}`}
+                      placeholder="Ingresa tu nombre"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="payment-phone" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    Teléfono
+                    {completedFields.has('phone') && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Completado
+                      </span>
+                    )}
+                  </label>
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                    <div className={`relative ${activeField === 'email' ? 'ring-2 ring-amber-500' : ''}`}>
-                      <AtSign size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="pl-10 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-800"
-                        placeholder="correo@ejemplo.com"
-                        disabled={isProcessing || waitingForConfirmation}
-                      />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
                     </div>
+                    <input
+                      type="tel"
+                      id="payment-phone"
+                      name="phone"
+                      value={contactData.phone}
+                      onChange={handleInputChange}
+                      className={`pl-10 p-2 w-full rounded-md shadow-sm transition-colors ${getFieldClass('phone')}`}
+                      placeholder="Ingresa tu teléfono"
+                    />
                   </div>
-                  
+                </div>
+                
+                <div>
+                  <label htmlFor="payment-email" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    Correo electrónico
+                    {completedFields.has('email') && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Completado
+                      </span>
+                    )}
+                  </label>
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Teléfono <span className="text-red-500">*</span>
-                    </label>
-                    <div className={`relative ${activeField === 'phone' ? 'ring-2 ring-amber-500' : ''}`}>
-                      <Phone size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="pl-10 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-800"
-                        placeholder="55 1234 5678"
-                        disabled={isProcessing || waitingForConfirmation}
-                      />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <AtSign className="h-5 w-5 text-gray-400" />
                     </div>
+                    <input
+                      type="email"
+                      id="payment-email"
+                      name="email"
+                      value={contactData.email}
+                      onChange={handleInputChange}
+                      className={`pl-10 p-2 w-full rounded-md shadow-sm transition-colors ${getFieldClass('email')}`}
+                      placeholder="Ingresa tu correo"
+                    />
                   </div>
                 </div>
               </div>
             </div>
-          )}
-          
-          {/* Aviso de pago en caja */}
-          {!showReceiptOption && (
-            <div className="bg-amber-50 p-3 rounded-md mb-4">
-              <div className="flex items-start">
-                <Receipt size={16} className="mt-1 mr-2 text-amber-600 flex-shrink-0" />
-                <p className="text-amber-700 text-sm">
-                  Este formulario registra tu pedido. El pago se realizará físicamente en caja.
-                </p>
+            
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Método de pago</h3>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActivePaymentMethod('efectivo')}
+                  className={`p-3 rounded-md border flex flex-col items-center transition-all ${
+                    activePaymentMethod === 'efectivo' 
+                      ? 'border-amber-500 bg-amber-50 shadow-md' 
+                      : 'border-gray-300 hover:border-amber-300'
+                  }`}
+                >
+                  <CreditCard className={`h-6 w-6 mb-2 ${activePaymentMethod === 'efectivo' ? 'text-amber-600' : 'text-gray-500'}`} />
+                  <span className={`text-sm font-medium ${activePaymentMethod === 'efectivo' ? 'text-amber-700' : 'text-gray-700'}`}>Efectivo</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setActivePaymentMethod('tarjeta')}
+                  className={`p-3 rounded-md border flex flex-col items-center transition-all ${
+                    activePaymentMethod === 'tarjeta' 
+                      ? 'border-amber-500 bg-amber-50 shadow-md' 
+                      : 'border-gray-300 hover:border-amber-300'
+                  }`}
+                >
+                  <CreditCard className={`h-6 w-6 mb-2 ${activePaymentMethod === 'tarjeta' ? 'text-amber-600' : 'text-gray-500'}`} />
+                  <span className={`text-sm font-medium ${activePaymentMethod === 'tarjeta' ? 'text-amber-700' : 'text-gray-700'}`}>Tarjeta</span>
+                </button>
               </div>
             </div>
-          )}
-          
-          {/* Botón de pago */}
-          {!showReceiptOption && (
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-medium py-3 px-4 rounded-md shadow-md hover:shadow-lg transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
-              disabled={isProcessing || (!isFormComplete && !waitingForConfirmation)}
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                  Procesando...
-                </>
-              ) : waitingForConfirmation ? (
-                <>
-                  <Check size={18} className="mr-2" />
-                  Confirmar Pedido
-                </>
-              ) : (
-                <>
-                  <Receipt size={18} className="mr-2" />
-                  Registrar Pedido
-                </>
-              )}
-            </button>
-          )}
-          
-          {!showReceiptOption && (
-            <p className="text-xs text-center text-gray-500 mt-4">
-              Tus datos están seguros. Utilizamos encriptación de 256 bits para proteger tu información.
-              <br />
-              <span className="text-red-500">*</span> Campos obligatorios
-            </p>
-          )}
-          
-          {/* Botón para cerrar después de mostrar recibo */}
-          {showReceiptOption && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-3 w-full border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Cerrar
-            </button>
-          )}
-        </form>
+            
+            <div className="mt-8">
+              <button
+                onClick={handleSubmitPayment}
+                disabled={!validateForm() || paymentProcessing}
+                className={`w-full py-3 px-4 rounded-md transition-all shadow-md flex items-center justify-center ${
+                  validateForm() && !paymentProcessing
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {paymentProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-5 w-5 mr-2" />
+                    Confirmar y Pagar
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
+      
+      {/* Indicador de espera de respuesta */}
+      {waitingForUserResponse && (
+        <div className="absolute bottom-0 left-0 right-0 bg-blue-50 text-blue-700 p-2 flex items-center justify-center border-t border-blue-200">
+          <Clock className="h-5 w-5 text-blue-500 animate-pulse mr-2" />
+          <span>Esperando respuesta...{waitingSeconds > 0 ? ` (${waitingSeconds}s)` : ''}</span>
+        </div>
+      )}
     </div>
   );
-};
-
-export default PaymentForm; 
+} 

@@ -15,6 +15,9 @@ import OrderDetails from '@/app/components/OrderDetails';
 import MenuTaqueria from '@/app/components/MenuTaqueria';
 import { PhoneOffIcon, MenuIcon, BookUserIcon, MessageSquareTextIcon } from 'lucide-react';
 import OrderAnalytics from './components/order/OrderAnalytics';
+import PaymentForm from './components/PaymentForm';
+import OrderSummary from './components/OrderSummary';
+import VoiceCommands from './components/VoiceCommands';
 
 type SearchParamsProps = {
   showMuteSpeakerButton: boolean;
@@ -124,6 +127,11 @@ export default function Home() {
   const [activeMenuCategory, setActiveMenuCategory] = useState<'tacos' | 'bebidas' | 'extras'>('tacos');
   // Estado para controlar las animaciones de transición entre vistas
   const [isViewTransitioning, setIsViewTransitioning] = useState(false);
+  
+  const [isVoiceActive, setIsVoiceActive] = useState(true);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [orderCompletedData, setOrderCompletedData] = useState<any>(null);
   
   useEffect(() => {
     if (transcriptContainerRef.current) {
@@ -440,6 +448,59 @@ export default function Home() {
         setIsViewTransitioning(false);
       }, 50);
     }, 300);
+  };
+
+  // Escuchar eventos de pago
+  useEffect(() => {
+    const handleProcessPayment = () => {
+      console.log("Evento processPayment recibido en la página principal");
+      setShowPaymentForm(true);
+      setShowOrderSummary(false);
+    };
+    
+    const handlePaymentCompleted = (event: CustomEvent) => {
+      const { success, orderId } = event.detail || {};
+      
+      if (success) {
+        console.log(`Pago completado exitosamente para el pedido: ${orderId}`);
+        setShowPaymentForm(false);
+        setShowOrderSummary(true);
+        
+        // Obtener detalles del pedido completado para mostrar en el resumen
+        setOrderCompletedData({
+          orderId: orderId || `ORD-${Date.now().toString().slice(-6)}`,
+          timestamp: new Date().toISOString(),
+          paymentMethod: 'Efectivo', // Por defecto
+          orderStatus: 'pending',
+          ...event.detail
+        });
+      } else {
+        console.log("Error al completar el pago");
+        setShowPaymentForm(true);
+        setShowOrderSummary(false);
+      }
+    };
+    
+    // Agregar event listeners
+    window.addEventListener('processPayment', handleProcessPayment);
+    window.addEventListener('paymentCompleted', handlePaymentCompleted as EventListener);
+    
+    // Limpiar event listeners
+    return () => {
+      window.removeEventListener('processPayment', handleProcessPayment);
+      window.removeEventListener('paymentCompleted', handlePaymentCompleted as EventListener);
+    };
+  }, []);
+  
+  // Manejar el toggle del micrófono
+  const handleToggleVoice = () => {
+    setIsVoiceActive(prev => !prev);
+  };
+  
+  // Volver a la vista principal desde la vista de resumen de pedido
+  const handleBackToMainView = () => {
+    setShowOrderSummary(false);
+    setOrderCompletedData(null);
   };
 
   return (
