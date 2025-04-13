@@ -123,6 +123,8 @@ export default function Home() {
   const [activeMenuCategory, setActiveMenuCategory] = useState<'tacos' | 'bebidas' | 'extras'>('tacos');
   // Estado para controlar las animaciones de transición entre vistas
   const [isViewTransitioning, setIsViewTransitioning] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   
   useEffect(() => {
     if (transcriptContainerRef.current) {
@@ -251,8 +253,9 @@ export default function Home() {
       // Bebidas
       'horchata': { category: 'bebidas', productId: 'agua-horchata' },
       'agua de horchata': { category: 'bebidas', productId: 'agua-horchata' },
-      'jamaica': { category: 'bebidas', productId: 'agua-jamaica' },
-      'agua de jamaica': { category: 'bebidas', productId: 'agua-jamaica' },
+      'jugo de manzana': { category: 'bebidas', productId: 'jugo-manzana' },
+      'manzana': { category: 'bebidas', productId: 'jugo-manzana' },
+      'jugo': { category: 'bebidas', productId: 'jugo-manzana' },
       'refresco': { category: 'bebidas', productId: 'refresco' },
       
       // Extras
@@ -368,15 +371,15 @@ export default function Home() {
 
   const handleEndCallButtonClick = async () => {
     try {
-      handleStatusChange('Ending call...');
+      handleStatusChange('Finalizando llamada...');
       await endCall();
       setIsCallActive(false);
 
       clearCustomerProfile();
       setCustomerProfileKey(null);
-      handleStatusChange('Call ended successfully');
+      handleStatusChange('Llamada finalizada con éxito');
     } catch (error) {
-      handleStatusChange(`Error ending call: ${error instanceof Error ? error.message : String(error)}`);
+      handleStatusChange(`Error al finalizar la llamada: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -433,6 +436,17 @@ export default function Home() {
         setIsViewTransitioning(false);
       }, 50);
     }, 300);
+  };
+
+  // Controles de micrófono y altavoz
+  const handleMicToggle = () => {
+    setIsMicMuted(!isMicMuted);
+    // Aquí iría la lógica para silenciar el micrófono
+  };
+  
+  const handleMuteSpeakerToggle = () => {
+    setIsSpeakerMuted(!isSpeakerMuted);
+    // Aquí iría la lógica para silenciar el altavoz
   };
 
   return (
@@ -538,14 +552,17 @@ export default function Home() {
                         <MicToggleButton
                           label="Micrófono"
                           className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
+                          isMuted={isMicMuted}
+                          onToggle={handleMicToggle}
                         />
                         {showMuteSpeakerButton && (
-                          <button 
-                            onClick={handleMuteSpeakerToggle}
+                          <MicToggleButton
+                            label="Altavoz"
                             className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
-                          >
-                            <span>Altavoz</span>
-                          </button>
+                            isMuted={isSpeakerMuted}
+                            onToggle={handleMuteSpeakerToggle}
+                            isUser={false}
+                          />
                         )}
                       </div>
                     )}
@@ -554,7 +571,7 @@ export default function Home() {
                 
                 {showDebugMessages && (
                   <div className="mt-4">
-                    <DebugMessages messages={callDebugMessages} />
+                    <DebugMessages debugMessages={callDebugMessages} />
                   </div>
                 )}
               </div>
@@ -564,7 +581,7 @@ export default function Home() {
           {/* Footer */}
           <footer className="bg-amber-800 text-amber-200 py-3 text-center text-sm">
             <div className="container mx-auto">
-              <p>Taquería "El Buen Sabor" © 2023 - Asistente de voz con Claude 3.5 Sonnet</p>
+              <p>Taquería "El Buen Sabor" © {new Date().getFullYear()} - Asistente de voz con Claude 3.5 Sonnet</p>
             </div>
           </footer>
           

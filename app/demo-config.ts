@@ -21,7 +21,7 @@ function getSystemPrompt() {
 
     # BEBIDAS
     AGUA DE HORCHATA $25.00
-    AGUA DE JAMAICA $25.00
+    JUGO DE MANZANA $25.00
     REFRESCO $20.00
 
     # EXTRAS
@@ -31,7 +31,7 @@ function getSystemPrompt() {
     ORDEN DE CEBOLLITAS $25.00
 
   ## Flujo de Conversación
-  1. Saludo -> Toma de Pedido -> Llamada "updateOrder" -> Confirmación -> Información de Pago
+  1. Saludo -> Toma de Pedido -> Llamada "updateOrder" -> Confirmación -> Llamada "processPayment" -> Finalización
   2. Mencionar que también pueden usar el menú visual: "También puedes seleccionar directamente desde nuestro menú visual"
 
   ## REGLAS CRUCIALES PARA EL USO DE HERRAMIENTAS
@@ -47,6 +47,7 @@ function getSystemPrompt() {
   - Es URGENTE que llames a updateOrder con cada cambio para mantener la interfaz actualizada
   - NUNCA omitas la llamada a updateOrder cuando se mencionen productos
   - NO emitas texto mientras llamas a updateOrder
+  - Cuando el cliente confirme el pedido, llama a la herramienta "processPayment" para completar la transacción
 
   ## Formato CORRECTO para llamar a updateOrder (EJEMPLOS CONCRETOS)
   Cuando un cliente pide "quiero dos tacos al pastor", INMEDIATAMENTE debes hacer esto:
@@ -88,6 +89,14 @@ function getSystemPrompt() {
   IMPORTANTE: SIEMPRE incluye TODOS los ítems anteriores cuando hagas una actualización, no solo el nuevo ítem.
   MUY IMPORTANTE: Asegúrate de usar exactamente este formato, envía el array de ítems directamente bajo la propiedad "orderDetailsData".
 
+  ## Formato para confirmar el pago
+  Cuando el cliente confirma el pedido con frases como "confirmar pedido", "proceder al pago", "completar compra", etc., debes llamar a la herramienta "processPayment":
+  \`\`\`
+  Función: processPayment
+  Parámetros: {}
+  \`\`\`
+  Después, informa al cliente que su pago ha sido procesado y que su pedido estará listo pronto.
+
   ## Pautas de Respuesta
   1. Formato Optimizado para Voz
     - Usa números hablados ("quince pesos" vs "$15.00")
@@ -123,6 +132,7 @@ function getSystemPrompt() {
     - Llama primero a la herramienta "updateOrder"
     - Solo confirma el pedido completo al final cuando el cliente ha terminado
     - Si ves que el cliente agrega ítems desde la interfaz, reconócelo con frases como "¡Excelente elección!"
+    - Cuando el cliente indique que desea finalizar y pagar, llama a la herramienta "processPayment"
 
   ## Gestión de Estado
   - CRUCIAL: Debes mantener en memoria todos los ítems del pedido para incluirlos cuando llames a updateOrder
@@ -182,6 +192,14 @@ const selectedTools: SelectedTool[] = [
           "required": true
         }
       ],
+      "client": {}
+    }
+  },
+  {
+    "temporaryTool": {
+      "modelToolName": "processPayment",
+      "description": "Procesa el pago del pedido actual. Se usa cuando el cliente confirma su pedido y desea completar la compra.",
+      "dynamicParameters": [],
       "client": {}
     }
   }

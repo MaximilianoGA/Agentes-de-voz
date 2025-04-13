@@ -253,4 +253,59 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
     console.error("[highlightProductTool] Error al resaltar producto:", error);
     return "Error al resaltar el producto.";
   }
+};
+
+/**
+ * Herramienta para procesar el pago del pedido actual.
+ * Permite al agente solicitar que se complete el proceso de pago.
+ */
+export const processPaymentTool: ClientToolImplementation = (params) => {
+  console.log("[processPaymentTool] Solicitando procesamiento de pago:", JSON.stringify(params, null, 2));
+  
+  if (typeof window === "undefined") {
+    console.warn("[processPaymentTool] No estamos en un entorno de navegador, no se puede procesar el pago");
+    return "Solicitud de procesamiento de pago recibida, pero no se pueden ejecutar en este entorno.";
+  }
+  
+  // Verificar si hay un pedido activo
+  const currentOrderStr = localStorage.getItem('orderDetails');
+  if (!currentOrderStr || currentOrderStr === '[]') {
+    console.warn("[processPaymentTool] No hay un pedido activo para procesar");
+    return "No hay ningún pedido activo que procesar. Por favor, agregue productos al carrito primero.";
+  }
+  
+  try {
+    // Emitir un evento para que la interfaz de usuario procese el pago
+    const paymentRequestEvent = new CustomEvent('agentRequestPayment');
+    window.dispatchEvent(paymentRequestEvent);
+    console.log("[processPaymentTool] Evento de solicitud de pago emitido correctamente");
+    
+    // Configurar un listener para detectar cuando se completa el pago
+    return new Promise<string>((resolve) => {
+      // Configurar timeout por si el evento nunca llega
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener('paymentCompleted', paymentCompletedHandler);
+        resolve("Tiempo de espera agotado para el procesamiento del pago. Por favor, intente nuevamente.");
+      }, 10000); // 10 segundos de timeout
+      
+      // Manejador para el evento paymentCompleted
+      const paymentCompletedHandler = (event: Event) => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('paymentCompleted', paymentCompletedHandler);
+        
+        // Obtener detalles del pago
+        const paymentDetails = (event as CustomEvent).detail;
+        const total = paymentDetails?.total || 0;
+        
+        console.log("[processPaymentTool] Pago completado:", paymentDetails);
+        resolve(`Pago procesado con éxito. Total: $${total.toFixed(2)}. ¡Gracias por su compra!`);
+      };
+      
+      // Registrar el listener para el evento de pago completado
+      window.addEventListener('paymentCompleted', paymentCompletedHandler);
+    });
+  } catch (error) {
+    console.error("[processPaymentTool] Error al procesar el pago:", error);
+    return "Ha ocurrido un error al procesar el pago. Por favor, intente nuevamente más tarde.";
+  }
 }; 

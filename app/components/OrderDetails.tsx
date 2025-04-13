@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Trash2, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Trash2, ShoppingBag, CheckCircle } from 'lucide-react';
 
 interface OrderDetail {
   name: string;
@@ -12,6 +12,8 @@ interface OrderDetail {
 const OrderDetails = () => {
   const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
   const [total, setTotal] = useState(0);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   const orderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,6 +125,51 @@ const OrderDetails = () => {
     }).format(amount);
   };
 
+  const handlePayment = () => {
+    if (orderDetails.length === 0) return;
+    
+    // Iniciar animación de procesamiento
+    setIsPaymentProcessing(true);
+    
+    // Simular un procesamiento de pago
+    setTimeout(() => {
+      setIsPaymentProcessing(false);
+      setPaymentCompleted(true);
+      
+      // Enviar evento para que el agente sepa que el pago se completó
+      const paymentEvent = new CustomEvent('paymentCompleted', {
+        detail: {
+          total: total,
+          items: orderDetails,
+          timestamp: new Date().toISOString()
+        }
+      });
+      window.dispatchEvent(paymentEvent);
+      
+      // Resetear estado después de unos segundos
+      setTimeout(() => {
+        setPaymentCompleted(false);
+        clearOrder();
+      }, 3000);
+      
+    }, 2000);
+  };
+
+  useEffect(() => {
+    // Escuchar solicitudes de pago del agente
+    const handleAgentPaymentRequest = () => {
+      if (orderDetails.length > 0 && !isPaymentProcessing && !paymentCompleted) {
+        handlePayment();
+      }
+    };
+    
+    window.addEventListener('agentRequestPayment', handleAgentPaymentRequest as EventListener);
+    
+    return () => {
+      window.removeEventListener('agentRequestPayment', handleAgentPaymentRequest as EventListener);
+    };
+  }, [orderDetails, isPaymentProcessing, paymentCompleted]);
+
   return (
     <div ref={orderRef} className="bg-white rounded-lg shadow-lg p-5 h-full flex flex-col animate-fade-in">
       <div className="bg-gradient-to-r from-amber-600 to-amber-500 rounded-t-lg -mt-5 -mx-5 p-4 mb-4">
@@ -177,15 +224,36 @@ const OrderDetails = () => {
               <button 
                 onClick={clearOrder}
                 className="btn px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isPaymentProcessing || paymentCompleted}
               >
                 Limpiar pedido
               </button>
               
               <button 
-                className="btn ripple bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md shadow-md transition-all flex items-center"
+                onClick={handlePayment}
+                disabled={isPaymentProcessing || paymentCompleted || orderDetails.length === 0}
+                className={`btn ripple px-4 py-2 rounded-md shadow-md transition-all flex items-center ${
+                  isPaymentProcessing ? 'bg-amber-500 cursor-wait' : 
+                  paymentCompleted ? 'bg-green-600 hover:bg-green-700' : 
+                  'bg-amber-600 hover:bg-amber-700'
+                } text-white`}
               >
-                <ShoppingBag className="mr-2" /> 
-                Proceder al pago
+                {isPaymentProcessing ? (
+                  <>
+                    <div className="animate-spin mr-2 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    Procesando...
+                  </>
+                ) : paymentCompleted ? (
+                  <>
+                    <CheckCircle className="mr-2" />
+                    ¡Pago exitoso!
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="mr-2" /> 
+                    Proceder al pago
+                  </>
+                )}
               </button>
             </div>
           </div>

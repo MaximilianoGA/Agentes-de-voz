@@ -61,13 +61,13 @@ const menuItems: MenuItem[] = [
     name: 'Agua de Horchata',
     description: 'Bebida refrescante de arroz con canela',
     price: 25.00,
-    image: '🥤',
+    image: '🥛',
     category: 'bebidas'
   },
   {
-    id: 'agua-jamaica',
-    name: 'Agua de Jamaica',
-    description: 'Tradicional agua de flor de jamaica',
+    id: 'jugo-manzana',
+    name: 'Jugo de Manzana',
+    description: 'Refrescante jugo natural de manzana',
     price: 25.00,
     image: '🧃',
     category: 'bebidas'
@@ -93,7 +93,7 @@ const menuItems: MenuItem[] = [
     name: 'Quesadilla',
     description: 'Tortilla de maíz con queso derretido',
     price: 30.00,
-    image: '🌯',
+    image: '🫔',
     category: 'extras'
   },
   {
@@ -304,20 +304,23 @@ export function MenuTaqueria({
                 style={{
                   animationDelay: `${index * 0.08}s`,
                   opacity: 0,
-                  animation: 'fadeIn 0.5s ease forwards'
+                  animation: 'fadeIn 0.5s ease forwards',
+                  height: '380px',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
                 ref={el => {
                   if (el) productRefs.current[item.id] = el;
                 }}
               >
-                <div className="p-5">
+                <div className="p-5 flex flex-col flex-grow">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="flex items-center">
                         <span className="text-3xl mr-3 transition-transform duration-300 hover:scale-110 hover:rotate-6">{item.image}</span>
                         <h3 className="text-lg font-bold text-amber-900">{item.name}</h3>
                       </div>
-                      <p className="text-amber-700 text-sm mt-1">{item.description}</p>
+                      <p className="text-amber-700 text-sm mt-1 h-12 overflow-hidden">{item.description}</p>
                     </div>
                     <div className="text-xl font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
                       ${item.price.toFixed(2)}
