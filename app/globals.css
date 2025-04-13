@@ -186,6 +186,62 @@
   }
 }
 
+/* Animaciones para la celebración del pedido completado */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes thank-you-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: var(--taco-highlight);
+  border-radius: 50%;
+  animation: confetti 5s ease-in-out forwards;
+}
+
+.confetti:nth-child(2n) {
+  background-color: var(--taco-primary);
+  animation-delay: 0.2s;
+}
+
+.confetti:nth-child(3n) {
+  background-color: var(--taco-accent);
+  animation-delay: 0.5s;
+}
+
+.confetti:nth-child(4n) {
+  background-color: #65a30d;
+  animation-delay: 0.7s;
+}
+
+.thank-you-container {
+  animation: fadeIn 1s ease-out forwards;
+}
+
+.thank-you-message {
+  animation: thank-you-pulse 2s infinite;
+}
+
 /* Estilos para las burbujas de conversación */
 .conversation-message {
   animation: fadeIn 0.3s ease-out forwards;
