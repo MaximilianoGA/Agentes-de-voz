@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Trash2, ShoppingBag, CheckCircle, PartyPopper } from 'lucide-react';
 import { endCall } from '@/lib/callFunctions';
 
 interface OrderDetail {
@@ -171,21 +170,30 @@ const OrderDetails = () => {
           console.warn('Error al reproducir el sonido de celebración:', error);
         }
         
-        // Terminar la llamada automáticamente después de unos segundos
+        // Terminar la llamada automáticamente
         setTimeout(async () => {
           try {
             await endCall();
-            // Resetear el estado del pedido
-            clearOrder();
-            setPaymentCompleted(false);
-            setShowThankYouMessage(false);
+            // NO resetear el estado del pedido ni ocultar el mensaje de agradecimiento
           } catch (error) {
             console.error('Error al finalizar la llamada:', error);
           }
-        }, 10000); // Aumentamos a 10 segundos para que haya más tiempo de disfrutar la animación
+        }, 5000); // Reducido a 5 segundos pero sólo para terminar la llamada
         
       }, 1500);
     }, 2000);
+  };
+
+  // Función para iniciar un nuevo pedido
+  const startNewOrder = async () => {
+    // Resetear todos los estados
+    clearOrder();
+    setPaymentCompleted(false);
+    setShowThankYouMessage(false);
+    
+    // Opcionalmente, redirigir a la página principal o reiniciar el componente
+    // Si estamos en la página principal, simplemente reiniciamos el estado
+    window.location.reload(); // Esto recargará la página para comenzar un nuevo pedido
   };
 
   useEffect(() => {
@@ -215,7 +223,7 @@ const OrderDetails = () => {
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 20 - 20}%`,
-                backgroundColor: ['#FFC107', '#F44336', '#2196F3', '#4CAF50', '#9C27B0', '#FF9800'][Math.floor(Math.random() * 6)],
+                backgroundColor: ['#FF6B00', '#FFC107', '#F44336'][Math.floor(Math.random() * 3)],
                 width: `${Math.random() * 10 + 5}px`, 
                 height: `${Math.random() * 15 + 10}px`,
                 animationDuration: `${3 + Math.random() * 4}s`,
@@ -225,27 +233,32 @@ const OrderDetails = () => {
           ))}
           
           <div className="celebration-animation mb-4">
-            <PartyPopper size={100} className="text-amber-500 animate-bounce" />
+            <span className="text-orange-500 animate-bounce text-7xl">🎉</span>
           </div>
-          <h2 className="text-3xl font-bold text-amber-600 mb-3 thank-you-message animate-scale-in">¡Gracias por tu pedido!</h2>
-          <p className="text-xl text-amber-800 mb-2 animate-fade-in-up delay-150">Tu orden estará lista pronto</p>
-          <p className="text-lg text-amber-700 animate-fade-in-up delay-300">¡Buen provecho!</p>
-          <div className="mt-8 p-3 bg-amber-50 rounded-lg border border-amber-200 max-w-xs mx-auto animate-fade-in-up delay-500">
-            <p className="text-sm text-gray-500">La llamada finalizará automáticamente...</p>
-          </div>
+          <h2 className="text-3xl font-bold text-orange-600 mb-3 thank-you-message animate-scale-in">¡Gracias por tu pedido!</h2>
+          <p className="text-xl text-amber-700 mb-2 animate-fade-in-up delay-150">Tu orden estará lista pronto</p>
+          <p className="text-lg text-orange-500 animate-fade-in-up delay-300">¡Buen provecho!</p>
+          
+          <button 
+            onClick={startNewOrder}
+            className="mt-8 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-md transition-all hover:shadow-lg hover:scale-105 animate-fade-in-up delay-500 flex items-center gap-2"
+          >
+            <span className="text-xl">🛒</span>
+            Hacer un nuevo pedido
+          </button>
         </div>
       ) : (
         <>
-          <div className="bg-gradient-to-r from-amber-600 to-amber-500 rounded-t-lg -mt-5 -mx-5 p-4 mb-4">
+          <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-t-lg -mt-5 -mx-5 p-4 mb-4">
             <h2 className="text-xl font-bold text-white flex items-center">
-              <ShoppingCart className="mr-2 text-2xl" /> 
+              <span className="mr-2 text-2xl">🛒</span>
               Detalles del Pedido
             </h2>
           </div>
           
           {orderDetails.length === 0 ? (
             <div className="flex-grow flex flex-col items-center justify-center text-gray-500">
-              <ShoppingCart className="text-6xl mb-3 text-amber-300 animate-bounce-slow" />
+              <span className="text-6xl mb-3 text-amber-300 animate-bounce-slow">🛒</span>
               <p className="text-lg font-medium">Tu pedido está vacío</p>
               <p className="text-sm mt-2 text-center">Los productos que menciones al agente aparecerán aquí</p>
             </div>
@@ -253,12 +266,12 @@ const OrderDetails = () => {
             <>
               <div className="flex-grow overflow-auto order-items-container">
                 {orderDetails.map((item, index) => (
-                  <div key={index} className="mb-3 p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow product-card bg-white">
+                  <div key={index} className="mb-3 p-4 border border-amber-100 rounded-lg shadow-sm hover:shadow-md transition-shadow product-card bg-white">
                     <div className="flex justify-between items-start">
                       <div className="flex-grow">
                         <div className="flex justify-between mb-2">
                           <h3 className="font-medium text-lg text-amber-900">{item.name}</h3>
-                          <p className="font-semibold text-amber-700">
+                          <p className="font-semibold text-orange-600">
                             {formatCurrency(item.quantity * item.price)}
                           </p>
                         </div>
@@ -267,16 +280,16 @@ const OrderDetails = () => {
                             <span className="inline-block w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">
                               {item.quantity}
                             </span>
-                            <span className="text-gray-500">unidad{item.quantity !== 1 ? 'es' : ''}</span>
+                            <span className="text-amber-600">unidad{item.quantity !== 1 ? 'es' : ''}</span>
                           </span>
-                          <span className="text-right font-medium text-amber-600">
+                          <span className="text-right font-medium text-orange-600">
                             {formatCurrency(item.price)} c/u
                           </span>
                         </div>
                         {item.specialInstructions && (
                           <div className="mt-2 text-sm text-gray-700 bg-amber-50 p-2 rounded-md border-l-2 border-amber-400">
                             <span className="font-medium block text-xs text-amber-700 mb-1">Instrucciones especiales:</span>
-                            <p className="italic text-gray-600">
+                            <p className="italic text-amber-800">
                               {item.specialInstructions}
                             </p>
                           </div>
@@ -284,26 +297,26 @@ const OrderDetails = () => {
                       </div>
                       <button 
                         onClick={() => removeItem(index)}
-                        className="ml-2 text-gray-400 hover:text-red-500 transition-colors p-1 hover:bg-gray-100 rounded-full"
+                        className="ml-2 text-gray-400 hover:text-orange-500 transition-colors p-1 hover:bg-amber-50 rounded-full"
                         aria-label="Eliminar producto"
                       >
-                        <Trash2 size={18} />
+                        <span className="text-lg">🗑️</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
               
-              <div className="border-t border-gray-200 pt-4 mt-4">
+              <div className="border-t border-amber-200 pt-4 mt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="font-medium text-gray-800">Total:</span>
-                  <span className="font-bold text-xl text-amber-700">{formatCurrency(total)}</span>
+                  <span className="font-medium text-amber-800">Total:</span>
+                  <span className="font-bold text-xl text-orange-600">{formatCurrency(total)}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <button 
                     onClick={clearOrder}
-                    className="btn px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="btn px-4 py-2 border border-amber-300 rounded-md text-amber-700 hover:bg-amber-50 transition-colors"
                     disabled={isPaymentProcessing || paymentCompleted}
                   >
                     Limpiar pedido
@@ -314,8 +327,8 @@ const OrderDetails = () => {
                     disabled={isPaymentProcessing || paymentCompleted || orderDetails.length === 0}
                     className={`btn ripple px-4 py-2 rounded-md shadow-md transition-all flex items-center ${
                       isPaymentProcessing ? 'bg-amber-500 cursor-wait' : 
-                      paymentCompleted ? 'bg-green-600 hover:bg-green-700' : 
-                      'bg-amber-600 hover:bg-amber-700 hover:scale-105'
+                      paymentCompleted ? 'bg-orange-600 hover:bg-orange-700' : 
+                      'bg-orange-600 hover:bg-orange-700 hover:scale-105'
                     } text-white`}
                   >
                     {isPaymentProcessing ? (
@@ -325,12 +338,12 @@ const OrderDetails = () => {
                       </>
                     ) : paymentCompleted ? (
                       <>
-                        <CheckCircle className="mr-2" />
+                        <span className="mr-2">✅</span>
                         ¡Pago exitoso!
                       </>
                     ) : (
                       <>
-                        <ShoppingBag className="mr-2" /> 
+                        <span className="mr-2">💰</span> 
                         Proceder al pago
                       </>
                     )}

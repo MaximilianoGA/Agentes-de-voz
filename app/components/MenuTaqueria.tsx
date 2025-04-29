@@ -134,6 +134,7 @@ export function MenuTaqueria({
   const [specialInstructions, setSpecialInstructions] = useState<Record<string, string>>({});
   const productRefs = useRef<Record<string, HTMLDivElement>>({});
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [highlightedProduct, setHighlightedProduct] = useState<string | null>(null);
   
   // Actualizar la categoría interna cuando la externa cambia
   useEffect(() => {
@@ -252,153 +253,128 @@ export function MenuTaqueria({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-amber-50 to-white">
-      {/* Encabezado */}
-      <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-white p-5 sticky top-0 shadow-lg z-10 rounded-b-lg">
-        <h2 className="text-3xl font-bold mb-2 flex items-center">
-          <span className="mr-2">🌮</span>Nuestro Menú
+    <div className="h-full flex flex-col bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Encabezado del menú */}
+      <div className="bg-gradient-to-r from-[#DD4B1A] to-[#FF6B00] p-4 text-white">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          🌮 Nuestro Menú
         </h2>
-        
-        {/* Botones de categorías */}
-        <div className="flex space-x-3 mt-4 overflow-x-auto pb-1">
-          <button
-            onClick={() => handleCategoryChange('tacos')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'tacos' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🌮</span> Tacos
-          </button>
-          <button
-            onClick={() => handleCategoryChange('bebidas')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'bebidas' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🥤</span> Bebidas
-          </button>
-          <button
-            onClick={() => handleCategoryChange('extras')}
-            className={`px-5 py-2 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-md flex items-center font-medium
-              ${activeCategory === 'extras' 
-                ? 'bg-white text-amber-700 shadow-md' 
-                : 'bg-amber-700/80 text-white hover:bg-amber-800/90 backdrop-blur-sm'}`}
-          >
-            <span className="text-xl mr-2">🍽️</span> Extras
-          </button>
-        </div>
+      </div>
+      
+      {/* Tabs de categorías */}
+      <div className="flex border-b border-amber-200">
+        <button 
+          onClick={() => handleCategoryChange('tacos')}
+          className={`flex-1 py-3 font-medium border-b-2 text-sm transition-colors ${
+            activeCategory === 'tacos' 
+              ? 'border-[#FF6B00] text-[#FF6B00] bg-amber-50' 
+              : 'border-transparent text-gray-500 hover:text-[#FF6B00]'
+          }`}
+        >
+          <span className="text-2xl mr-2">🌮</span>
+          Tacos
+        </button>
+        <button 
+          onClick={() => handleCategoryChange('bebidas')}
+          className={`flex-1 py-3 font-medium border-b-2 text-sm transition-colors ${
+            activeCategory === 'bebidas' 
+              ? 'border-[#FF6B00] text-[#FF6B00] bg-amber-50' 
+              : 'border-transparent text-gray-500 hover:text-[#FF6B00]'
+          }`}
+        >
+          <span className="text-2xl mr-2">🥤</span>
+          Bebidas
+        </button>
+        <button 
+          onClick={() => handleCategoryChange('extras')}
+          className={`flex-1 py-3 font-medium border-b-2 text-sm transition-colors ${
+            activeCategory === 'extras' 
+              ? 'border-[#FF6B00] text-[#FF6B00] bg-amber-50' 
+              : 'border-transparent text-gray-500 hover:text-[#FF6B00]'
+          }`}
+        >
+          <span className="text-2xl mr-2">🍴</span>
+          Extras
+        </button>
       </div>
       
       {/* Lista de productos */}
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex-grow overflow-y-auto p-4 bg-amber-50" id="menu-products">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
           {menuItems
             .filter(item => item.category === activeCategory)
-            .map((item, index) => (
-              <div 
-                key={item.id} 
-                id={`product-${item.id}`} 
-                className="product-card border border-amber-100 rounded-xl overflow-hidden shadow-sm bg-white hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-                style={{
-                  animationDelay: `${index * 0.08}s`,
-                  opacity: 0,
-                  animation: 'fadeIn 0.5s ease forwards',
-                  height: '380px',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-                ref={el => {
+            .map(item => (
+              <div
+                key={item.id}
+                ref={(el: HTMLDivElement | null) => {
                   if (el) productRefs.current[item.id] = el;
                 }}
+                className={`product-card bg-white p-4 rounded-lg border border-amber-100 shadow-sm hover:shadow transition-all relative overflow-hidden ${
+                  highlightedProduct === item.id ? 'border-[#F44336] animate-pulse-highlight' : 'border-transparent'
+                }`}
               >
-                <div className="p-5 flex flex-col flex-grow">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center">
-                        <span className="text-3xl mr-3 transition-transform duration-300 hover:scale-110 hover:rotate-6">{item.image}</span>
-                        <h3 className="text-lg font-bold text-amber-900">{item.name}</h3>
-                      </div>
-                      <p className="text-amber-700 text-sm mt-1 h-12 overflow-hidden">{item.description}</p>
-                    </div>
-                    <div className="text-xl font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                      ${item.price.toFixed(2)}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="flex items-center mb-3">
-                      <label className="block text-amber-800 text-sm mr-2 font-medium">Cantidad:</label>
-                      <div className="flex items-center shadow-sm rounded-lg overflow-hidden">
-                        <button 
-                          onClick={() => handleQuantityChange(item.id, Math.max(1, (quantities[item.id] || 1) - 1))}
-                          className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium w-10 h-10 rounded-l flex items-center justify-center transition-colors duration-200"
-                        >
-                          -
-                        </button>
-                        <input 
-                          type="number" 
-                          min="1" 
-                          max="10" 
-                          value={quantities[item.id] || 1} 
-                          readOnly
-                          className="w-12 h-10 text-center border-t border-b border-amber-100 bg-white text-amber-900 font-medium"
-                        />
-                        <button 
-                          onClick={() => handleQuantityChange(item.id, Math.min(10, (quantities[item.id] || 1) + 1))}
-                          className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium w-10 h-10 rounded-r flex items-center justify-center transition-colors duration-200"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-amber-800 text-sm mb-1 font-medium">Instrucciones especiales:</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Sin cebolla, extra salsa..." 
-                        value={specialInstructions[item.id] || ''} 
-                        onChange={(e) => handleInstructionsChange(item.id, e.target.value)}
-                        className="w-full p-3 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all bg-amber-50/50 placeholder-amber-300"
-                      />
-                    </div>
-                    
+                <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-orange-500 via-amber-300 to-red-400"></div>
+                <div className="mb-2 text-2xl">{item.image}</div>
+                <h3 className="font-bold text-amber-900">{item.name}</h3>
+                <p className="text-sm text-amber-700 mb-2">{item.description}</p>
+                <div className="font-bold text-orange-600 mb-3">${item.price.toFixed(2)}</div>
+                
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-amber-800 mb-1">
+                    Cantidad:
+                  </label>
+                  <div className="flex items-center mb-3">
                     <button 
-                      onClick={() => handleAddToOrder(item)}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white py-3 px-4 rounded-lg shadow transition-all duration-300 transform hover:shadow-md hover:scale-[1.02] font-medium flex items-center justify-center"
+                      onClick={() => handleQuantityChange(item.id, Math.max(0, (quantities[item.id] || 1) - 1))}
+                      className="bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg w-8 h-8 flex items-center justify-center transition-colors"
                     >
-                      <span className="mr-2">🛒</span>
-                      Agregar al Pedido
+                      <span>-</span>
+                    </button>
+                    <span className="px-3 text-lg font-medium text-amber-900">{quantities[item.id] || 1}</span>
+                    <button 
+                      onClick={() => handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)}
+                      className="bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg w-8 h-8 flex items-center justify-center transition-colors"
+                    >
+                      <span>+</span>
                     </button>
                   </div>
+                  
+                  <label className="block text-sm font-medium text-amber-800 mb-1">
+                    Instrucciones especiales:
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Sin cebolla, salsa..." 
+                    value={specialInstructions[item.id] || ''} 
+                    onChange={(e) => handleInstructionsChange(item.id, e.target.value)} 
+                    className="w-full p-2 border border-amber-200 rounded-md mb-3 text-sm focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  
+                  <button 
+                    onClick={() => handleAddToOrder(item)}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-md transition-colors flex items-center justify-center gap-2"
+                  >
+                    Agregar al Pedido
+                  </button>
                 </div>
               </div>
             ))}
         </div>
       </div>
       
-      {/* Estilos para animación de resaltado y otras animaciones */}
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes highlightAnimation {
-          0% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0); transform: scale(1); }
-          25% { box-shadow: 0 0 15px 6px rgba(245, 158, 11, 0.4); transform: scale(1.03); background-color: rgba(254, 243, 199, 0.8); }
-          50% { box-shadow: 0 0 10px 4px rgba(245, 158, 11, 0.3); transform: scale(1.02); background-color: rgba(254, 243, 199, 0.5); }
-          75% { box-shadow: 0 0 15px 6px rgba(245, 158, 11, 0.4); transform: scale(1.03); background-color: rgba(254, 243, 199, 0.8); }
-          100% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0); transform: scale(1); }
-        }
-        
+      <style jsx>{`
         .highlight-product {
-          animation: highlightAnimation 2.5s ease;
-          border-color: #f59e0b;
-          border-width: 2px;
-          z-index: 1;
+          box-shadow: 0 0 0 2px #F97316, 0 0 0 4px rgba(249, 115, 22, 0.3);
+          transform: translateY(-2px);
+          transition: all 0.3s ease;
+        }
+        
+        .product-card {
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .product-card:hover {
+          transform: translateY(-2px);
         }
       `}</style>
     </div>

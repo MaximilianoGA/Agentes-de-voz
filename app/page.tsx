@@ -13,7 +13,6 @@ import DebugMessages from '@/app/components/DebugMessages';
 import MicToggleButton from '@/app/components/MicToggleButton';
 import OrderDetails from '@/app/components/OrderDetails';
 import MenuTaqueria from '@/app/components/MenuTaqueria';
-import { PhoneOffIcon, MenuIcon, BookUserIcon, MessageSquareTextIcon } from 'lucide-react';
 
 type SearchParamsProps = {
   showMuteSpeakerButton: boolean;
@@ -46,7 +45,7 @@ function TranscriptView({ transcripts }: { transcripts: TranscriptType[] | null 
   return (
     <div className="p-4 overflow-y-auto flex-grow bg-amber-50 rounded-lg shadow-inner">
       <h2 className="text-xl font-bold mb-3 text-amber-900 border-b-2 border-amber-200 pb-2 flex items-center">
-        <MessageSquareTextIcon className="w-5 h-5 mr-2 text-amber-600" />
+        <span className="w-5 h-5 mr-2 text-amber-600">💬</span>
         Conversación
       </h2>
       <div className="space-y-3">
@@ -56,8 +55,8 @@ function TranscriptView({ transcripts }: { transcripts: TranscriptType[] | null 
               key={index} 
               className={`p-3 rounded-lg transition-all duration-300 ${
                 transcript.speaker === Role.USER 
-                  ? 'bg-green-100 border-l-4 border-green-600 ml-8 hover:bg-green-50' 
-                  : 'bg-amber-100 border-l-4 border-amber-600 mr-8 hover:bg-amber-50'
+                  ? 'bg-amber-100 border-l-4 border-orange-500 ml-8 hover:bg-amber-50' 
+                  : 'bg-orange-100 border-l-4 border-amber-600 mr-8 hover:bg-orange-50'
               } shadow-sm`}
               style={{
                 animationDelay: `${index * 0.05}s`,
@@ -71,7 +70,7 @@ function TranscriptView({ transcripts }: { transcripts: TranscriptType[] | null 
             </div>
           ))
         ) : (
-          <div className="text-center py-8 bg-white/50 rounded-lg border border-amber-100 shadow-sm">
+          <div className="text-center py-8 bg-amber-50/50 rounded-lg border border-amber-100 shadow-sm">
             <p className="text-amber-800 font-medium">Inicia una conversación con nuestro asistente</p>
             <p className="text-sm text-amber-600 mt-2">Pregunta por nuestras especialidades o haz tu pedido</p>
           </div>
@@ -87,7 +86,7 @@ function AgentStatusView({ status }: { status: string }) {
     <div className="p-4 border-t-2 border-amber-300 bg-amber-50 rounded-b-lg">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${status === 'off' ? 'bg-red-600' : 'bg-green-600'} animate-pulse`}></div>
+          <div className={`w-3 h-3 rounded-full ${status === 'off' ? 'bg-red-600' : 'bg-amber-500'} animate-pulse`}></div>
           <span className="text-sm font-medium text-amber-900">
             {status === 'off' 
               ? 'Asistente desconectado' 
@@ -452,10 +451,10 @@ export default function Home() {
   return (
     <SearchParamsHandler>
       {({ showMuteSpeakerButton, modelOverride, showDebugMessages, showUserTranscripts }) => (
-        <div className="flex flex-col h-screen bg-amber-100">
+        <div className="flex flex-col h-screen bg-amber-50">
           
           {/* Header */}
-          <header className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-4 shadow-md">
+          <header className="bg-gradient-to-r from-orange-600 to-amber-700 text-white p-4 shadow-md">
             <div className="container mx-auto flex justify-between items-center">
               <div className="flex items-center space-x-3">
                 <BorderedImage 
@@ -463,11 +462,11 @@ export default function Home() {
                   alt="Taquería Logo" 
                   width={50} 
                   height={50} 
-                  className="rounded-full border-4 border-white shadow-lg" 
+                  className="rounded-full border-4 border-amber-100 shadow-lg" 
                 />
                 <div>
                   <h1 className="text-2xl font-bold">Taquería "El Buen Sabor"</h1>
-                  <p className="text-xs text-amber-200">Asistente de voz para tu pedido</p>
+                  <p className="text-xs text-amber-100">Asistente de voz para tu pedido</p>
                 </div>
               </div>
               
@@ -477,24 +476,24 @@ export default function Home() {
                   onClick={() => changeView('chat')}
                   className={`p-2 rounded-lg transition-all duration-300 flex items-center ${
                     activeView === 'chat' 
-                      ? 'bg-white text-amber-700' 
-                      : 'bg-amber-700/50 text-white hover:bg-amber-700/80'
+                      ? 'bg-white text-orange-700' 
+                      : 'bg-orange-700/50 text-white hover:bg-orange-700/80'
                   }`}
                   aria-label="Ver chat"
                 >
-                  <MessageSquareTextIcon size={20} />
+                  <span className="w-5 h-5 mr-2 text-amber-600">💬</span>
                   <span className="ml-2 hidden sm:inline">Chat</span>
                 </button>
                 <button 
                   onClick={() => changeView('menu')}
                   className={`p-2 rounded-lg transition-all duration-300 flex items-center ${
                     activeView === 'menu' 
-                      ? 'bg-white text-amber-700' 
-                      : 'bg-amber-700/50 text-white hover:bg-amber-700/80'
+                      ? 'bg-white text-orange-700' 
+                      : 'bg-orange-700/50 text-white hover:bg-orange-700/80'
                   }`}
                   aria-label="Ver menú"
                 >
-                  <MenuIcon size={20} />
+                  <span className="w-5 h-5 mr-2 text-amber-600">🍴</span>
                   <span className="ml-2 hidden sm:inline">Menú</span>
                 </button>
               </div>
@@ -551,14 +550,14 @@ export default function Home() {
                       <div className="w-full grid grid-cols-2 gap-2">
                         <MicToggleButton
                           label="Micrófono"
-                          className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
+                          className="bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
                           isMuted={isMicMuted}
                           onToggle={handleMicToggle}
                         />
                         {showMuteSpeakerButton && (
                           <MicToggleButton
                             label="Altavoz"
-                            className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
+                            className="bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded-lg transition-colors flex justify-center items-center space-x-2"
                             isMuted={isSpeakerMuted}
                             onToggle={handleMuteSpeakerToggle}
                             isUser={false}
@@ -579,9 +578,9 @@ export default function Home() {
           </main>
           
           {/* Footer */}
-          <footer className="bg-amber-800 text-amber-200 py-3 text-center text-sm">
+          <footer className="bg-orange-800 text-orange-100 py-3 text-center text-sm">
             <div className="container mx-auto">
-              <p>Taquería "El Buen Sabor" © {new Date().getFullYear()} - Asistente de voz con Claude 3.5 Sonnet</p>
+              <p>Taquería "El Buen Sabor" © {new Date().getFullYear()} - Asistente de voz de Cognitive Data Solutions</p>
             </div>
           </footer>
           

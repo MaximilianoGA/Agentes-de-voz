@@ -4,16 +4,16 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
+  --background-start-rgb: 255, 255, 255;
   --background-end-rgb: 255, 255, 255;
   
-  /* Colores para el tema de taquería */
-  --taco-primary: #f59e0b;
-  --taco-secondary: #d97706;
-  --taco-accent: #65a30d;
-  --taco-dark: #78350f;
-  --taco-light: #fef3c7;
-  --taco-highlight: #fbbf24;
+  /* Nueva paleta de colores más vibrante para comida mexicana */
+  --taco-primary: #FF5000;    /* Naranja mexicano intenso */
+  --taco-secondary: #E60023;  /* Rojo intenso */
+  --taco-accent: #FFB800;     /* Amarillo mexicano */
+  --taco-dark: #8B2000;       /* Marrón rojizo oscuro */
+  --taco-light: #FFF9E5;      /* Crema cálido */
+  --taco-highlight: #FF9500;  /* Naranja brillante */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +22,255 @@
     --background-start-rgb: 0, 0, 0;
     --background-end-rgb: 0, 0, 0;
   }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.speech-button {
+  /* Estilos específicos para el botón de voz */
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: var(--taco-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.speech-button:hover {
+  transform: scale(1.1);
+  background-color: var(--taco-secondary);
+}
+
+.speech-button:active {
+  transform: scale(0.95);
+}
+
+.speech-button.listening {
+  background-color: var(--taco-highlight);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
+
+.menu-category {
+  transition: all 0.3s ease;
+}
+
+.menu-category:hover {
+  transform: translateY(-5px);
+}
+
+.menu-item {
+  transition: all 0.3s ease;
+}
+
+.menu-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.menu-item-image {
+  transition: all 0.5s ease;
+}
+
+.menu-item:hover .menu-item-image {
+  transform: scale(1.05);
+}
+
+@keyframes floatIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.float-in {
+  animation: floatIn 0.5s ease forwards;
+}
+
+@keyframes pulse-highlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 107, 0, 0);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0);
+    transform: scale(1);
+  }
+}
+
+.highlight-pulse {
+  animation: pulse-highlight 2s infinite;
+}
+
+@keyframes thank-you-pulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(255, 107, 0, 0);
+  }
+  50% {
+    transform: scale(1.1);
+    text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(255, 107, 0, 0);
+  }
+}
+
+.thank-you-text {
+  animation: thank-you-pulse 2s infinite;
+}
+
+/* Animación de confeti para la celebración */
+@keyframes confetti-rain {
+  0% {
+    opacity: 1;
+    transform: translateY(-100vh);
+  }
+  100% {
+    opacity: 0.3;
+    transform: translateY(100vh);
+  }
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background-color: var(--taco-accent);
+  opacity: 0;
+  z-index: 1000;
+  animation: confetti-rain 5s linear infinite;
+}
+
+.confetti:nth-child(2n) {
+  background-color: var(--taco-primary);
+  width: 7px;
+  height: 7px;
+  animation-delay: 0.2s;
+  animation-duration: 4.7s;
+}
+
+.confetti:nth-child(3n) {
+  background-color: var(--taco-highlight);
+  width: 9px;
+  height: 9px;
+  animation-delay: 0.4s;
+  animation-duration: 4.4s;
+}
+
+.confetti:nth-child(4n) {
+  background-color: var(--taco-secondary);
+  width: 8px;
+  height: 8px;
+  animation-delay: 0.6s;
+  animation-duration: 4.1s;
+}
+
+.confetti:nth-child(5n) {
+  background-color: white;
+  width: 6px;
+  height: 6px;
+  animation-delay: 0.8s;
+  animation-duration: 3.8s;
+}
+
+/* Estilos para el transcript */
+.transcript-container {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--taco-secondary) var(--taco-light);
+}
+
+.transcript-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.transcript-container::-webkit-scrollbar-track {
+  background: var(--taco-light);
+}
+
+.transcript-container::-webkit-scrollbar-thumb {
+  background-color: var(--taco-secondary);
+  border-radius: 4px;
+}
+
+.transcript-message {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.user-message {
+  align-self: flex-end;
+  background-color: rgba(255, 107, 0, 0.15);
+  margin-left: auto;
+}
+
+.assistant-message {
+  align-self: flex-start;
+  background-color: rgba(255, 193, 7, 0.15);
+}
+
+/* Estilos para dropdowns personalizados */
+.custom-select {
+  position: relative;
+}
+
+.custom-select select {
+  appearance: none;
+  padding-right: 30px;
+}
+
+.custom-select::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--taco-dark);
+  pointer-events: none;
 }
 
 /* Monospace Font */
@@ -142,15 +391,15 @@
 /* Animaciones y efectos para el menú de la taquería */
 @keyframes pulse-highlight {
   0% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.7);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 10px rgba(255, 107, 0, 0);
     transform: scale(1.02);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0);
     transform: scale(1);
   }
 }
@@ -200,13 +449,13 @@
 
 @keyframes thank-you-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 15px rgba(255, 107, 0, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0);
   }
 }
 
@@ -230,7 +479,7 @@
 }
 
 .confetti:nth-child(4n) {
-  background-color: #65a30d;
+  background-color: #FFFFFF;
   animation-delay: 0.7s;
 }
 
