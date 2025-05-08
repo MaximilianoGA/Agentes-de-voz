@@ -70,17 +70,4 @@ export function getCurrentDateTime(): string {
     hour: '2-digit',
     minute: '2-digit'
   });
-}
-
-/**
- * Formatea un número como moneda mexicana (MXN)
- * @param amount - El monto a formatear
- * @returns - El monto formateado como moneda
- */
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 2
-  }).format(amount);
-}; 
+} 
