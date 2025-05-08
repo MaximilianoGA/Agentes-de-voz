@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: "El Sabor Mexicano",
@@ -22,6 +23,7 @@ export default function RootLayout({
         <div className="flex flex-col h-screen">
           {children}
         </div>
+        <Script src="/confetti.js" />
       </body>
     </html>
   );

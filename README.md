@@ -12,7 +12,8 @@ Un asistente virtual conversacional avanzado para taquerías, impulsado por Ultr
 - **Herramientas personalizadas:** Integración con actions para actualizar pedidos, resaltar productos y procesar pagos.
 - **Tema personalizable:** Estilizado con colores de la bandera mexicana y totalmente adaptable.
 - **Diseño responsive:** Funciona perfectamente en dispositivos móviles y de escritorio.
-- **Feedback audiovisual:** Incluye animaciones y sonidos para mejorar la experiencia del usuario.
+- **Feedback audiovisual:** Incluye animaciones de confeti y sonidos para mejorar la experiencia del usuario.
+- **Proceso de pago simplificado:** Sin formularios complejos, solo un botón para confirmar el pedido.
 
 ## 🛠️ Tecnologías
 
@@ -21,6 +22,7 @@ Un asistente virtual conversacional avanzado para taquerías, impulsado por Ultr
 - [Tailwind CSS](https://tailwindcss.com/) - Framework de CSS utility-first
 - [TypeScript](https://www.typescriptlang.org/) - Tipado estático para JavaScript
 - [Ultravox AI](https://ultravox.ai/) - API para voz a texto y texto a voz
+- [Canvas Confetti](https://github.com/catdad/canvas-confetti) - Efectos visuales de celebración
 
 ## 📋 Requisitos Previos
 
@@ -74,7 +76,8 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 1. **Iniciar una conversación**: Haz clic en el botón "Iniciar llamada" para activar el asistente.
 2. **Realizar pedidos por voz**: Habla con el asistente y menciona los productos que deseas.
 3. **Usar la interfaz visual**: Navega por el menú visual y añade productos directamente.
-4. **Finalizar pedido**: Indica al asistente que deseas proceder con el pago o usa el botón correspondiente.
+4. **Finalizar pedido**: Indica al asistente que deseas proceder con el pago o usa el botón "Confirmar Pedido".
+5. **Disfrutar de la experiencia**: Al confirmar el pedido, se mostrará una animación de confeti y sonará un efecto de éxito.
 
 ## 🔄 Personalizando el Agente
 
@@ -129,14 +132,30 @@ Los colores principales se definen en `app/globals.css`:
 ```css
 :root {
   /* Paleta de colores principales */
-  --taco-primary: #FF5000;    /* Color principal */
-  --taco-secondary: #E60023;  /* Color secundario */
-  --taco-accent: #FFB800;     /* Color de acento */
-  --taco-dark: #8B2000;       /* Color oscuro */
+  --taco-primary: #006341;    /* Verde (bandera mexicana) */
+  --taco-secondary: #CE1126;  /* Rojo (bandera mexicana) */
+  --taco-accent: #FFFFFF;     /* Blanco (bandera mexicana) */
+  --taco-dark: #003821;       /* Verde oscuro */
   --taco-light: #FFF9E5;      /* Color claro */
-  --taco-highlight: #FF9500;  /* Color de resaltado */
+  --taco-highlight: #FFDF00;  /* Amarillo dorado (acento) */
 }
 ```
+
+### Personalizar Efectos de Confeti y Sonidos
+
+Los efectos de celebración se pueden personalizar en `public/confetti.js`:
+
+```javascript
+// Personalizar opciones de confeti
+window.confetti({
+  particleCount: 200,           // Más partículas
+  spread: 90,                   // Mayor dispersión
+  origin: { y: 0.6 },           // Origen del confeti
+  colors: ['#006341', '#FFFFFF', '#CE1126'] // Colores mexicanos
+});
+```
+
+Para cambiar el sonido de éxito, simplemente reemplaza el archivo en `public/sounds/success.mp3`.
 
 ### Añadir Nuevas Funciones del Agente
 
@@ -185,7 +204,8 @@ const selectedTools: SelectedTool[] = [
 │   ├── clientTools.ts   # Implementaciones de herramientas
 │   └── types.ts         # Definiciones de TypeScript
 ├── public/             # Recursos estáticos (imágenes, sonidos)
-│   ├── sounds/         # Archivos de audio
+│   ├── sounds/         # Archivos de audio para efectos
+│   ├── confetti.js     # Script para animaciones de confeti
 │   └── taco-logo.svg   # Logo de la taquería
 ├── .env.local          # Variables de entorno (crear localmente)
 ├── package.json        # Dependencias y scripts
@@ -205,7 +225,8 @@ const selectedTools: SelectedTool[] = [
 3. Se registran las herramientas (`registerToolImplementation`)
 4. El agente procesa la entrada de voz y llama a las herramientas según sea necesario
 5. Las herramientas actualizan la interfaz (estado del pedido, resaltado de productos, etc.)
-6. El usuario finaliza la llamada (`endCall` en `callFunctions.ts`)
+6. El usuario confirma el pedido y se muestran efectos audiovisuales de celebración
+7. El usuario finaliza la llamada (`endCall` en `callFunctions.ts`)
 
 ## 🛣️ Roadmap
 
