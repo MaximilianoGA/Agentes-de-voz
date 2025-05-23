@@ -134,6 +134,17 @@ const menuItems: MenuItem[] = [
     categoryId: 'extras',
     available: true,
     allergens: []
+  },
+  {
+    id: 'salsa-xplosion',
+    name: 'Salsa Xplosion',
+    description: 'Nuestra salsa especial ultra picante, ¡solo para valientes!',
+    price: 10.00,
+    imageUrl: '🌶️',
+    categoryId: 'extras',
+    available: true,
+    allergens: [],
+    featured: true
   }
 ];
 
