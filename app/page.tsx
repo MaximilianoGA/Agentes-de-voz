@@ -48,7 +48,7 @@ function SearchParamsHandler({ children }: SearchParamsHandlerProps) {
 function TranscriptView({ transcripts }: { transcripts: TranscriptType[] | null }) {
   return (
     <div className="p-4 overflow-y-auto flex-grow bg-amber-50 rounded-lg shadow-inner">
-      <h2 className="text-xl font-bold mb-3 text-amber-900 border-b-2 border-amber-200 pb-2 flex items-center">
+      <h2 className="text-xl font-bold mb-3 text-green-700 border-b-2 border-amber-200 pb-2 flex items-center">
         <MessageSquareTextIcon className="w-5 h-5 mr-2 text-amber-600" />
         Conversación
       </h2>
