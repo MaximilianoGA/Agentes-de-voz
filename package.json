@@ -1,6 +1,6 @@
 {
   "name": "ultravox-tutorial-client-tools",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "packageManager": "pnpm@9.9.0",
   "private": true,
   "scripts": {
