@@ -1,4 +1,4 @@
-import { updateOrderTool, processPaymentTool, paymentInputTool, completePaymentTool } from './utils/clientTools';
+import { updateOrderTool, processPaymentTool, paymentInputTool, completePaymentTool } from './clientTools';
 
 // Extender el tipo Window global para incluir las propiedades personalizadas
 declare global {
