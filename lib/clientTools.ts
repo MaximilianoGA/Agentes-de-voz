@@ -7,6 +7,17 @@ type ToolParams = any;
 type ClientToolImplementation = (params: ToolParams) => Promise<string>;
 
 /**
+ * Normaliza cadenas para comparaciones sin acentos y en minúsculas.
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim();
+}
+
+/**
  * Herramienta para actualizar los detalles del pedido.
  * Valida y procesa los datos del pedido antes de enviar el evento.
  */
@@ -301,13 +312,14 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
       return Promise.resolve("Error: ID de producto no proporcionado");
     }
     
-    // Normalizar el ID del producto
-    productId = productId.toString().toLowerCase().trim();
+    // Normalizar el ID del producto para comparaciones robustas
+    productId = normalizeText(productId);
     
     // Mapeo de nombres comunes a IDs de producto
     const productIdMappings: Record<string, string> = {
       'pastor': 'taco-pastor',
       'al pastor': 'taco-pastor',
+      'taco al pastor': 'taco-pastor',
       'suadero': 'taco-suadero',
       'taco suadero': 'taco-suadero',
       'bistec': 'taco-bistec',
@@ -327,11 +339,16 @@ export const highlightProductTool: ClientToolImplementation = (params) => {
       'queso extra': 'queso-extra',
       'cebollitas': 'cebollitas'
     };
-    
+
+    const normalizedMappings: Record<string, string> = {};
+    for (const [key, value] of Object.entries(productIdMappings)) {
+      normalizedMappings[normalizeText(key)] = value;
+    }
+
     // Verificar si necesitamos mapear el ID
-    if (productIdMappings[productId]) {
-      console.log(`[highlightProductTool] Mapeando ID: ${productId} -> ${productIdMappings[productId]}`);
-      productId = productIdMappings[productId];
+    if (normalizedMappings[productId]) {
+      console.log(`[highlightProductTool] Mapeando ID: ${productId} -> ${normalizedMappings[productId]}`);
+      productId = normalizedMappings[productId];
     }
     
     console.log(`[highlightProductTool] Resaltando producto: ${productId}`, category ? `Categoría: ${category}` : '');
