@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { /*MenuCategory,*/ OrderItem, MenuItem } from '@/app/lib/types';
+import { OrderItem, MenuItem } from '@/app/lib/types';
 import { menuItems } from '@/app/lib/data/menu-items';
 import { useOrder } from '@/app/lib/hooks/useOrder';
 import { PlusCircle, MinusCircle, ShoppingCart } from 'lucide-react';
