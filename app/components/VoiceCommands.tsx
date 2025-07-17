@@ -274,7 +274,11 @@ export default function VoiceCommands({ isActive = false, onToggle }: VoiceComma
 // Declaración de tipos para Window para evitar errores de TypeScript
 declare global {
   interface Window {
-    voiceAgentApi?: any;
+    voiceAgentApi?: {
+      configure: (options: any) => void;
+      startListening: () => void;
+      stopListening: () => void;
+    };
     playSound?: (soundName: string, volume?: number) => void;
   }
 } 

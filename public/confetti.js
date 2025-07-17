@@ -96,9 +96,11 @@ window.confetti = function(options) {
   // Play success sound if available
   try {
     const audio = new Audio('/sounds/success.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => console.log('No se pudo reproducir el sonido', e));
+    if (audio) {
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('No se pudo reproducir el sonido', e));
+    }
   } catch (e) {
-    console.error('Error al reproducir sonido:', e);
+    console.log('Sonido no disponible');
   }
 };

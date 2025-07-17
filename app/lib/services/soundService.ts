@@ -65,7 +65,7 @@ export function preloadSounds(): Promise<void> {
       
       // Si hay error, resolver de todas formas para no bloquear
       audioElement.addEventListener('error', () => {
-        console.warn(`Error al cargar sonido: ${path}`);
+        console.warn(`No se pudo cargar el sonido: ${path}`);
         resolve();
       });
     });

@@ -1,4 +1,8 @@
-import { ClientToolImplementation } from 'ultravox-client';
+// Eliminamos las importaciones problemáticas y definimos los tipos localmente
+
+// Definición local de tipos para reemplazar las importaciones
+type ToolParams = any;
+type ClientToolImplementation = (params: ToolParams) => Promise<string>;
 import { OrderItem, MenuItem } from './types';
 import { menuItems } from './data/menu-items';
 import { addItemToOrder, getCurrentOrder, clearCurrentOrder, updateItemQuantity } from './services/orderService';
@@ -370,4 +374,4 @@ export const completePaymentTool: ClientToolImplementation = (params) => {
     console.error("[completePaymentTool] Error al completar el registro:", error);
     return "Error al completar el registro del pedido.";
   }
-}; 
+};

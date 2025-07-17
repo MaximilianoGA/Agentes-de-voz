@@ -162,9 +162,6 @@ const MenuTaqueria = ({ activeCategory: externalActiveCategory, onCategoryChange
   const menuSoundRef = useRef<HTMLAudioElement | null>(null);
   const addToCartSoundRef = useRef<HTMLAudioElement | null>(null);
   const highlightSoundRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Lista de categorías disponibles
-  const categories = Array.from(new Set(menuItems.map(item => item.categoryId)));
 
   // Filtrar items por categoría y búsqueda
   const filteredItems = menuItems.filter(item => {

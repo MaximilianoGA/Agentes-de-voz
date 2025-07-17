@@ -57,8 +57,9 @@ export const OrderDetails = () => {
           <div className="flex-grow overflow-auto order-items-container">
             {order.items.map((item, index) => {
               const productDetails = getProductDetails(item.id);
+              const itemKey = `${item.id}-${index}-${item.specialInstructions || ''}`;
               return (
-                <div key={index} className="mb-3 p-3 border border-gray-100 rounded-lg shadow-sm hover-float product-card bg-white">
+                <div key={itemKey} className="mb-3 p-3 border border-gray-100 rounded-lg shadow-sm hover-float product-card bg-white">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center">
                       <span className="text-2xl mr-3">{productDetails?.imageUrl || '🍽️'}</span>
@@ -142,4 +143,4 @@ export const OrderDetails = () => {
   );
 };
 
-export default OrderDetails; 
+export default OrderDetails;

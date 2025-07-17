@@ -131,10 +131,11 @@ export default function OrderSummary() {
       <div className="flex-grow overflow-auto space-y-3 pr-1 order-items-container">
         {order.items.map((item, index) => {
           const productDetails = findProductDetails(item.id);
+          const itemKey = `${item.id}-${index}-${item.specialInstructions || ''}`;
           
           return (
             <div 
-              key={`${item.id}-${index}`} 
+              key={itemKey} 
               className="p-4 rounded-lg border border-gray-100 shadow-sm hover:shadow transition-all duration-200 product-card bg-white"
             >
               <div className="flex items-start">
