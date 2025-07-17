@@ -61,7 +61,8 @@ export function createNewOrder(): Order {
   const newOrder: Order = {
     id: generateId(),
     items: [],
-    totalAmount: 0,
+    subtotal: 0,
+    total: 0,
     status: 'pending',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -110,7 +111,8 @@ export function addItemToOrder(itemId: string, quantity: number, specialInstruct
   }
   
   // Recalcular el total
-  currentOrder.totalAmount = calculateOrderTotal(currentOrder);
+  currentOrder.subtotal = calculateOrderSubtotal(currentOrder);
+  currentOrder.total = calculateOrderTotal(currentOrder);
   currentOrder.updatedAt = new Date().toISOString();
   
   // Guardar el pedido actualizado
@@ -135,7 +137,8 @@ export function removeItemFromOrder(itemId: string): Order {
   currentOrder.items = currentOrder.items.filter(item => item.id !== itemId);
   
   // Recalcular el total
-  currentOrder.totalAmount = calculateOrderTotal(currentOrder);
+  currentOrder.subtotal = calculateOrderSubtotal(currentOrder);
+  currentOrder.total = calculateOrderTotal(currentOrder);
   currentOrder.updatedAt = new Date().toISOString();
   
   // Guardar el pedido actualizado
@@ -173,7 +176,8 @@ export function updateItemQuantity(itemId: string, quantity: number): Order {
   currentOrder.items[itemIndex].quantity = quantity;
   
   // Recalcular el total
-  currentOrder.totalAmount = calculateOrderTotal(currentOrder);
+  currentOrder.subtotal = calculateOrderSubtotal(currentOrder);
+  currentOrder.total = calculateOrderTotal(currentOrder);
   currentOrder.updatedAt = new Date().toISOString();
   
   // Guardar el pedido actualizado
@@ -213,12 +217,23 @@ export function updateItemInstructions(itemId: string, instructions: string): Or
 }
 
 /**
- * Calcula el total del pedido
+ * Calcula el subtotal del pedido
  * @param order Pedido a calcular
- * @returns Total calculado
+ * @returns Subtotal calculado
+ */
+export function calculateOrderSubtotal(order: Order): number {
+  return order.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+}
+
+/**
+ * Calcula el total del pedido incluyendo impuestos
+ * @param order Pedido a calcular
+ * @returns Total calculado con impuestos
  */
 export function calculateOrderTotal(order: Order): number {
-  return order.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const subtotal = calculateOrderSubtotal(order);
+  const tax = subtotal * 0.1; // 10% de impuesto
+  return subtotal + tax;
 }
 
 /**

@@ -196,12 +196,12 @@ export default function OrderSummary() {
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex justify-between items-center mb-1">
           <span className="text-gray-600">Subtotal:</span>
-          <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+          <span className="font-medium">{formatCurrency(order.subtotal)}</span>
         </div>
         
         <div className="flex justify-between items-center mb-4">
           <span className="font-medium text-gray-800">Total:</span>
-          <span className="font-bold text-xl text-amber-700">{formatCurrency(order.totalAmount)}</span>
+          <span className="font-bold text-xl text-amber-700">{formatCurrency(order.total)}</span>
         </div>
         
         <div className="flex justify-between gap-3">
